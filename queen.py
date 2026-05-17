@@ -11,7 +11,7 @@ import os
 import sys
 import urllib.request
 import urllib.error
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 # ── Paths ────────────────────────────────────────────────────
@@ -151,7 +151,7 @@ def write_memory(waggle: dict, decree: dict):
     """Append decree to MEMORY.md."""
     MEMORY_FILE.parent.mkdir(parents=True, exist_ok=True)
     entry = (
-        f"\n## {datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}\n"
+        f"\n## {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')}\n"
         f"- **Niche:** {waggle.get('niche', 'unknown')}\n"
         f"- **Vigor:** {waggle.get('vigor_score', '?')}\n"
         f"- **Confidence:** {waggle.get('confidence_score', '?')}\n"
@@ -169,11 +169,11 @@ def save_decree(waggle: dict, decree: dict):
     """Save decree JSON alongside waggle data."""
     DECREE_DIR.mkdir(parents=True, exist_ok=True)
     niche_slug = waggle.get("niche", "unknown").lower().replace(" ", "-")[:30]
-    ts = datetime.utcnow().strftime("%Y%m%d-%H%M%S")
+    ts = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
     decree_file = DECREE_DIR / f"decree-{niche_slug}-{ts}.json"
     with open(decree_file, "w") as f:
         json.dump({
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "waggle_input": waggle,
             "decree": decree
         }, f, indent=2)
