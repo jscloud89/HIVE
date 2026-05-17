@@ -1,0 +1,923 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🐝 The Hive — Status</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Share+Tech+Mono&family=VT323&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background: #0a0a14;
+  color: #e0e0e0;
+  font-family: 'Share Tech Mono', monospace;
+  min-height: 100vh;
+  padding: 20px;
+}
+
+h1 {
+  font-family: 'Cinzel', serif;
+  color: #F4A825;
+  text-align: center;
+  font-size: 28px;
+  letter-spacing: 4px;
+  text-shadow: 0 0 30px rgba(244,168,37,0.5);
+  margin-bottom: 4px;
+}
+
+.subtitle {
+  text-align: center;
+  color: rgba(244,168,37,0.4);
+  font-size: 11px;
+  letter-spacing: 2px;
+  margin-bottom: 24px;
+}
+
+#clock {
+  text-align: center;
+  font-family: 'VT323', monospace;
+  font-size: 32px;
+  color: rgba(244,168,37,0.7);
+  margin-bottom: 24px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 16px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.panel {
+  background: rgba(20, 20, 35, 0.9);
+  border: 1px solid rgba(244,168,37,0.2);
+  border-radius: 8px;
+  padding: 16px;
+  backdrop-filter: blur(8px);
+}
+
+.panel-title {
+  font-family: 'Cinzel', serif;
+  color: #F4A825;
+  font-size: 12px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin-bottom: 14px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(244,168,37,0.15);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Agent status rows */
+.agent-row {
+  display: flex;
+  align-items: center;
+  padding: 7px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  gap: 10px;
+}
+
+.agent-row:last-child { border-bottom: none; }
+
+.agent-emoji { font-size: 16px; width: 24px; text-align: center; }
+
+.agent-name {
+  flex: 1;
+  font-size: 12px;
+  color: rgba(255,255,255,0.8);
+}
+
+.agent-role {
+  font-size: 10px;
+  color: rgba(255,255,255,0.35);
+  flex: 1.5;
+}
+
+.status-badge {
+  padding: 2px 10px;
+  border-radius: 12px;
+  font-size: 10px;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+  font-weight: bold;
+}
+
+.status-online {
+  background: rgba(74,124,63,0.2);
+  border: 1px solid #4A7C3F;
+  color: #7dcc6c;
+}
+
+.status-idle {
+  background: rgba(100,100,100,0.15);
+  border: 1px solid rgba(150,150,150,0.3);
+  color: rgba(180,180,180,0.6);
+}
+
+.status-deferred {
+  background: rgba(60,60,100,0.15);
+  border: 1px solid rgba(100,100,180,0.3);
+  color: rgba(150,150,220,0.6);
+}
+
+.status-connecting {
+  background: rgba(200,140,0,0.15);
+  border: 1px solid rgba(200,140,0,0.4);
+  color: #F4A825;
+  animation: pulse 2s infinite;
+}
+
+.status-error {
+  background: rgba(180,30,30,0.2);
+  border: 1px solid #CC2222;
+  color: #ff6666;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* Metric cards */
+.metrics {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.metric {
+  background: rgba(10,10,20,0.6);
+  border: 1px solid rgba(244,168,37,0.1);
+  border-radius: 6px;
+  padding: 10px 12px;
+}
+
+.metric-label {
+  font-size: 9px;
+  color: rgba(244,168,37,0.5);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+
+.metric-value {
+  font-size: 20px;
+  font-family: 'VT323', monospace;
+  color: #F4A825;
+}
+
+.metric-value.green { color: #7dcc6c; }
+.metric-value.blue  { color: #40B0B0; }
+.metric-value.red   { color: #ff6666; }
+.metric-value.dim   { color: rgba(255,255,255,0.3); font-size: 16px; }
+
+/* Storage bars */
+.storage-item {
+  margin-bottom: 12px;
+}
+
+.storage-header {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  margin-bottom: 4px;
+}
+
+.storage-name { color: rgba(255,255,255,0.6); }
+.storage-pct  { color: #F4A825; }
+
+.storage-bar {
+  height: 6px;
+  background: rgba(255,255,255,0.08);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.storage-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.5s ease;
+}
+
+.fill-green  { background: linear-gradient(90deg, #3a6a2a, #7dcc6c); }
+.fill-yellow { background: linear-gradient(90deg, #8a6a00, #F4A825); }
+.fill-red    { background: linear-gradient(90deg, #6a0000, #CC2222); }
+
+/* Event ticker */
+.ticker-item {
+  padding: 6px 0;
+  font-size: 11px;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.ticker-item:last-child { border-bottom: none; }
+
+.ticker-time {
+  color: rgba(244,168,37,0.4);
+  font-family: 'VT323', monospace;
+  font-size: 13px;
+  white-space: nowrap;
+  min-width: 45px;
+}
+
+.ticker-text { color: rgba(255,255,255,0.65); line-height: 1.4; }
+
+/* Honey Split viz */
+.honey-split {
+  display: flex;
+  height: 28px;
+  border-radius: 6px;
+  overflow: hidden;
+  margin-bottom: 12px;
+}
+
+.split-seg {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  font-weight: bold;
+  letter-spacing: 0.5px;
+  transition: flex 0.5s ease;
+}
+
+.seg-tax   { background: #8B4513; color: rgba(255,255,255,0.8); flex: 25; }
+.seg-vent  { background: #2255AA; color: rgba(255,255,255,0.8); flex: 20; }
+.seg-maint { background: #336633; color: rgba(255,255,255,0.8); flex: 18; }
+.seg-prof  { background: #F4A825; color: rgba(0,0,0,0.8);       flex: 37; }
+
+.split-legend {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  color: rgba(255,255,255,0.55);
+}
+
+.legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+/* Print status */
+.print-status {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+}
+
+.print-icon { font-size: 24px; }
+
+.print-info { flex: 1; }
+
+.print-filename {
+  font-size: 12px;
+  color: rgba(255,255,255,0.8);
+  margin-bottom: 6px;
+}
+
+.print-bar {
+  height: 8px;
+  background: rgba(255,255,255,0.08);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.print-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #F4A825, #FFD700);
+  border-radius: 4px;
+  transition: width 1s ease;
+}
+
+.print-pct {
+  font-family: 'VT323', monospace;
+  font-size: 20px;
+  color: #F4A825;
+}
+
+/* Royal decree banner */
+#decree-banner {
+  display: none;
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  background: linear-gradient(135deg, rgba(13,13,26,0.98), rgba(30,20,5,0.98));
+  border-bottom: 2px solid #F4A825;
+  padding: 16px 24px;
+  z-index: 1000;
+  box-shadow: 0 4px 40px rgba(244,168,37,0.3);
+  animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+  from { transform: translateY(-100%); }
+  to   { transform: translateY(0); }
+}
+
+#decree-banner.visible { display: flex; align-items: center; gap: 16px; }
+
+.decree-icon { font-size: 28px; }
+
+.decree-content { flex: 1; }
+
+.decree-title {
+  font-family: 'Cinzel', serif;
+  color: #F4A825;
+  font-size: 14px;
+  margin-bottom: 4px;
+}
+
+.decree-detail { font-size: 11px; color: rgba(255,255,255,0.7); }
+
+.decree-actions { display: flex; gap: 8px; }
+
+.decree-btn {
+  padding: 8px 20px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  font-family: 'Cinzel', serif;
+  font-size: 12px;
+  transition: all 0.2s;
+}
+
+.btn-approve {
+  background: #4A7C3F;
+  color: white;
+  border: 1px solid #7dcc6c;
+}
+
+.btn-approve:hover {
+  background: #5a9c4f;
+  box-shadow: 0 0 15px rgba(125,204,108,0.4);
+}
+
+.btn-deny {
+  background: transparent;
+  color: #ff6666;
+  border: 1px solid #CC2222;
+}
+
+.btn-deny:hover { background: rgba(204,34,34,0.2); }
+
+/* Phase indicators */
+.phase-header {
+  font-size: 9px;
+  letter-spacing: 2px;
+  color: rgba(244,168,37,0.3);
+  text-transform: uppercase;
+  padding: 4px 0 8px;
+  margin-top: 4px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .grid { grid-template-columns: 1fr; }
+  h1 { font-size: 20px; }
+}
+</style>
+</head>
+<body>
+
+<!-- Royal Decree Banner -->
+<div id="decree-banner">
+  <div class="decree-icon">👑</div>
+  <div class="decree-content">
+    <div class="decree-title">ROYAL DECREE — Awaiting Your Stamp</div>
+    <div class="decree-detail" id="decree-detail">Loading...</div>
+  </div>
+  <div class="decree-actions">
+    <button class="decree-btn btn-approve" onclick="resolveDecree('APPROVE')">✓ APPROVE</button>
+    <button class="decree-btn btn-deny" onclick="resolveDecree('DENY')">✗ DENY</button>
+  </div>
+</div>
+
+<h1>🐝 THE HIVE</h1>
+<div class="subtitle">BEELINK SER5 MAX — LYLES, TN — LAUNDRY ROOM LAB</div>
+<div id="clock">--:--:--</div>
+
+<div class="grid">
+
+  <!-- PHASE 1 AGENTS -->
+  <div class="panel">
+    <div class="panel-title">🏗️ Core Infrastructure</div>
+    <div class="phase-header">Phase 1 — Active</div>
+
+    <div class="agent-row">
+      <div class="agent-emoji">🏥</div>
+      <div class="agent-name">Nurse</div>
+      <div class="agent-role">Briefings + Memory</div>
+      <span class="status-badge status-idle" id="status-nurse">IDLE</span>
+    </div>
+    <div class="agent-row">
+      <div class="agent-emoji">🛡️</div>
+      <div class="agent-name">Supervisor</div>
+      <div class="agent-role">Security Monitor</div>
+      <span class="status-badge status-idle" id="status-supervisor">IDLE</span>
+    </div>
+    <div class="agent-row">
+      <div class="agent-emoji">⚖️</div>
+      <div class="agent-name">Chancellor</div>
+      <div class="agent-role">Finance + Decrees</div>
+      <span class="status-badge status-idle" id="status-chancellor">IDLE</span>
+    </div>
+    <div class="agent-row">
+      <div class="agent-emoji">🖨️</div>
+      <div class="agent-name">Foreman</div>
+      <div class="agent-role">Bambu A1 Mini Bridge</div>
+      <span class="status-badge status-connecting" id="status-foreman">CONNECTING</span>
+    </div>
+    <div class="agent-row">
+      <div class="agent-emoji">🔬</div>
+      <div class="agent-name">Inspector</div>
+      <div class="agent-role">STL Validation</div>
+      <span class="status-badge status-idle" id="status-inspector">IDLE</span>
+    </div>
+    <div class="agent-row">
+      <div class="agent-emoji">📦</div>
+      <div class="agent-name">Quartermaster</div>
+      <div class="agent-role">Filament Inventory</div>
+      <span class="status-badge status-idle" id="status-quartermaster">IDLE</span>
+    </div>
+    <div class="agent-row">
+      <div class="agent-emoji">🔧</div>
+      <div class="agent-name">Engineer</div>
+      <div class="agent-role">OpenSCAD Designer</div>
+      <span class="status-badge status-idle" id="status-engineer">IDLE</span>
+    </div>
+  </div>
+
+  <!-- INTELLIGENCE AGENTS -->
+  <div class="panel">
+    <div class="panel-title">🧠 Intelligence Layer</div>
+    <div class="phase-header">Phase 1 — Active</div>
+
+    <div class="agent-row">
+      <div class="agent-emoji">👑</div>
+      <div class="agent-name">Queen</div>
+      <div class="agent-role">Strategy + Opus 4.6</div>
+      <span class="status-badge status-idle" id="status-queen">IDLE</span>
+    </div>
+    <div class="agent-row">
+      <div class="agent-emoji">🔍</div>
+      <div class="agent-name">Scout</div>
+      <div class="agent-role">Etsy / eBay Research</div>
+      <span class="status-badge status-idle" id="status-scout">IDLE</span>
+    </div>
+    <div class="agent-row">
+      <div class="agent-emoji">🐝</div>
+      <div class="agent-name">Worker</div>
+      <div class="agent-role">Listing Creation</div>
+      <span class="status-badge status-idle" id="status-worker">IDLE</span>
+    </div>
+    <div class="agent-row">
+      <div class="agent-emoji">🔒</div>
+      <div class="agent-name">Warden</div>
+      <div class="agent-role">Code Security + WGU</div>
+      <span class="status-badge status-idle" id="status-warden">IDLE</span>
+    </div>
+    <div class="agent-row">
+      <div class="agent-emoji">🧾</div>
+      <div class="agent-name">Auditor</div>
+      <div class="agent-role">Per-Print P&L</div>
+      <span class="status-badge status-idle" id="status-auditor">IDLE</span>
+    </div>
+    <div class="agent-row">
+      <div class="agent-emoji">🎵</div>
+      <div class="agent-name">Bard</div>
+      <div class="agent-role">Music + Worldbox</div>
+      <span class="status-badge status-idle" id="status-bard">IDLE</span>
+    </div>
+
+    <div class="phase-header" style="margin-top:12px;">Phase 2 — Deferred</div>
+    <div class="agent-row">
+      <div class="agent-emoji">📈</div>
+      <div class="agent-name">Forager</div>
+      <div class="agent-role">Market Intelligence</div>
+      <span class="status-badge status-deferred" id="status-forager">PHASE 2</span>
+    </div>
+    <div class="agent-row">
+      <div class="agent-emoji">💰</div>
+      <div class="agent-name">Treasurer</div>
+      <div class="agent-role">Portfolio Monitor</div>
+      <span class="status-badge status-deferred" id="status-treasurer">PHASE 2</span>
+    </div>
+    <div class="agent-row">
+      <div class="agent-emoji">🎩</div>
+      <div class="agent-name">Concierge</div>
+      <div class="agent-role">Customer Support</div>
+      <span class="status-badge status-deferred" id="status-concierge">PHASE 2</span>
+    </div>
+  </div>
+
+  <!-- FINANCIAL PANEL -->
+  <div class="panel">
+    <div class="panel-title">💰 Chancellor Ledger</div>
+
+    <div class="metrics" style="margin-bottom:16px;">
+      <div class="metric">
+        <div class="metric-label">Revenue Today</div>
+        <div class="metric-value" id="rev-today">$0.00</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">Revenue MTD</div>
+        <div class="metric-value green" id="rev-mtd">$0.00</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">API Spend Today</div>
+        <div class="metric-value" id="spend-today">$0.00</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">Tax Reserve</div>
+        <div class="metric-value blue" id="tax-reserve">$0.00</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">Net Profit MTD</div>
+        <div class="metric-value green" id="profit-mtd">$0.00</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">Pending Decrees</div>
+        <div class="metric-value" id="decrees">0</div>
+      </div>
+    </div>
+
+    <div style="font-size:10px; color:rgba(244,168,37,0.5); letter-spacing:1px; margin-bottom:8px;">HONEY SPLIT</div>
+    <div class="honey-split">
+      <div class="split-seg seg-tax">25%</div>
+      <div class="split-seg seg-vent">20%</div>
+      <div class="split-seg seg-maint">18%</div>
+      <div class="split-seg seg-prof">37%</div>
+    </div>
+    <div class="split-legend">
+      <div class="legend-item">
+        <div class="legend-dot" style="background:#8B4513;"></div>
+        <span>Tax Reserve 25%</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-dot" style="background:#2255AA;"></div>
+        <span>Venture Fund 20%</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-dot" style="background:#336633;"></div>
+        <span>Maintenance 18%</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-dot" style="background:#F4A825;"></div>
+        <span>Net Profit 37%</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- MANUFACTURING PANEL -->
+  <div class="panel">
+    <div class="panel-title">🖨️ Manufacturing Status</div>
+
+    <div id="print-idle" class="print-status">
+      <div class="print-icon">💤</div>
+      <div class="print-info">
+        <div class="print-filename" style="color:rgba(255,255,255,0.3);">No active print</div>
+        <div style="font-size:10px; color:rgba(255,255,255,0.2); margin-top:4px;">Bambu A1 Mini — Idle</div>
+      </div>
+    </div>
+
+    <div id="print-active" class="print-status" style="display:none;">
+      <div class="print-icon">🖨️</div>
+      <div class="print-info">
+        <div class="print-filename" id="print-filename">filename.stl</div>
+        <div class="print-bar" style="margin-bottom:6px;">
+          <div class="print-fill" id="print-fill" style="width:0%"></div>
+        </div>
+        <div style="font-size:10px; color:rgba(255,255,255,0.4);">
+          <span id="print-remaining">-- min remaining</span>
+        </div>
+      </div>
+      <div class="print-pct" id="print-pct">0%</div>
+    </div>
+
+    <div style="height:1px; background:rgba(255,255,255,0.06); margin:12px 0;"></div>
+
+    <div class="metrics">
+      <div class="metric">
+        <div class="metric-label">Prints Today</div>
+        <div class="metric-value dim" id="prints-today">0</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">Failed Today</div>
+        <div class="metric-value dim" id="prints-failed">0</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">Matte Black</div>
+        <div class="metric-value dim" id="fil-black">-- g</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">Marble White</div>
+        <div class="metric-value dim" id="fil-marble">-- g</div>
+      </div>
+    </div>
+
+    <div style="height:1px; background:rgba(255,255,255,0.06); margin:12px 0;"></div>
+
+    <div style="font-size:10px; color:rgba(244,168,37,0.5); letter-spacing:1px; margin-bottom:8px;">STL PIPELINE</div>
+    <div class="agent-row" style="padding:4px 0;">
+      <span style="font-size:11px; color:rgba(255,255,255,0.5); flex:1;">Queue</span>
+      <span style="font-size:12px; color:#F4A825;" id="stl-queue">0 files</span>
+    </div>
+    <div class="agent-row" style="padding:4px 0;">
+      <span style="font-size:11px; color:rgba(255,255,255,0.5); flex:1;">Pending Inspection</span>
+      <span style="font-size:12px; color:#F4A825;" id="stl-inspect">0 files</span>
+    </div>
+    <div class="agent-row" style="padding:4px 0; border:none;">
+      <span style="font-size:11px; color:rgba(255,255,255,0.5); flex:1;">Approved / Ready</span>
+      <span style="font-size:12px; color:#7dcc6c;" id="stl-approved">0 files</span>
+    </div>
+  </div>
+
+  <!-- STORAGE PANEL -->
+  <div class="panel">
+    <div class="panel-title">💾 Storage Monitor</div>
+
+    <div class="storage-item">
+      <div class="storage-header">
+        <span class="storage-name">SSD — OS + Docker</span>
+        <span class="storage-pct" id="ssd-pct">--%</span>
+      </div>
+      <div class="storage-bar">
+        <div class="storage-fill fill-green" id="ssd-bar" style="width:0%"></div>
+      </div>
+      <div style="font-size:9px; color:rgba(255,255,255,0.25); margin-top:3px;" id="ssd-free">-- GB free of 500GB</div>
+    </div>
+
+    <div class="storage-item">
+      <div class="storage-header">
+        <span class="storage-name">HDD1 — Active Storage</span>
+        <span class="storage-pct" id="hdd1-pct">--%</span>
+      </div>
+      <div class="storage-bar">
+        <div class="storage-fill fill-green" id="hdd1-bar" style="width:0%"></div>
+      </div>
+      <div style="font-size:9px; color:rgba(255,255,255,0.25); margin-top:3px;" id="hdd1-free">-- TB free of 4TB</div>
+    </div>
+
+    <div class="storage-item">
+      <div class="storage-header">
+        <span class="storage-name">HDD2 — Backup Mirror</span>
+        <span class="storage-pct" id="hdd2-pct">--%</span>
+      </div>
+      <div class="storage-bar">
+        <div class="storage-fill fill-green" id="hdd2-bar" style="width:0%"></div>
+      </div>
+      <div style="font-size:9px; color:rgba(255,255,255,0.25); margin-top:3px;" id="hdd2-free">-- TB free of 4TB</div>
+    </div>
+
+    <div style="height:1px; background:rgba(255,255,255,0.06); margin:12px 0;"></div>
+
+    <div class="agent-row" style="padding:4px 0;">
+      <span style="font-size:11px; color:rgba(255,255,255,0.5); flex:1;">Last Backup</span>
+      <span style="font-size:11px;" id="backup-status">Never</span>
+    </div>
+    <div class="agent-row" style="padding:4px 0; border:none;">
+      <span style="font-size:11px; color:rgba(255,255,255,0.5); flex:1;">Ollama Models</span>
+      <span style="font-size:11px; color:rgba(255,255,255,0.4);" id="ollama-size">-- GB</span>
+    </div>
+  </div>
+
+  <!-- EVENT TICKER -->
+  <div class="panel">
+    <div class="panel-title">📡 Hive Activity Feed</div>
+    <div id="ticker"></div>
+  </div>
+
+</div>
+
+<script>
+// ── Clock ─────────────────────────────────────────────────────────────────────
+function updateClock() {
+  const now = new Date();
+  const h = String(now.getHours()).padStart(2,'0');
+  const m = String(now.getMinutes()).padStart(2,'0');
+  const s = String(now.getSeconds()).padStart(2,'0');
+  document.getElementById('clock').textContent = `${h}:${m}:${s}`;
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+// ── Config — update BEELINK_IP to your Beelink's local IP ────────────────────
+const BEELINK_IP = window.location.hostname !== 'localhost'
+  ? window.location.hostname
+  : '192.168.1.100'; // Update this to your Beelink's static IP
+
+const CHANCELLOR_URL = `http://${BEELINK_IP}:8001`;
+const FOREMAN_URL    = `http://${BEELINK_IP}:8002`;
+
+// ── Data Fetcher ──────────────────────────────────────────────────────────────
+async function fetchJSON(url, timeout = 5000) {
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), timeout);
+  try {
+    const r = await fetch(url, { signal: controller.signal });
+    clearTimeout(id);
+    return await r.json();
+  } catch {
+    clearTimeout(id);
+    return null;
+  }
+}
+
+// ── Update Agent Status ───────────────────────────────────────────────────────
+function setStatus(id, status, label) {
+  const el = document.getElementById(`status-${id}`);
+  if (!el) return;
+  el.className = `status-badge status-${status}`;
+  el.textContent = label;
+}
+
+// ── Update Storage Bar ────────────────────────────────────────────────────────
+function updateStorageBar(prefix, pct, freeText) {
+  const pctEl  = document.getElementById(`${prefix}-pct`);
+  const barEl  = document.getElementById(`${prefix}-bar`);
+  const freeEl = document.getElementById(`${prefix}-free`);
+
+  if (pctEl) pctEl.textContent = `${pct}%`;
+  if (barEl) {
+    barEl.style.width = `${pct}%`;
+    barEl.className = 'storage-fill ' + (
+      pct >= 85 ? 'fill-red' :
+      pct >= 70 ? 'fill-yellow' : 'fill-green'
+    );
+  }
+  if (freeEl) freeEl.textContent = freeText;
+}
+
+// ── Add Ticker Event ──────────────────────────────────────────────────────────
+function addTick(text, time = null) {
+  const ticker = document.getElementById('ticker');
+  const now = time || new Date();
+  const ts = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+
+  const item = document.createElement('div');
+  item.className = 'ticker-item';
+  item.innerHTML = `
+    <span class="ticker-time">${ts}</span>
+    <span class="ticker-text">${text}</span>
+  `;
+  ticker.insertBefore(item, ticker.firstChild);
+  while (ticker.children.length > 12) ticker.removeChild(ticker.lastChild);
+}
+
+// ── Chancellor Data ───────────────────────────────────────────────────────────
+async function updateChancellor() {
+  const data = await fetchJSON(`${CHANCELLOR_URL}/summary`);
+  if (data) {
+    document.getElementById('rev-today').textContent =
+      `$${(data.total_gross_revenue || 0).toFixed(2)}`;
+    document.getElementById('rev-mtd').textContent =
+      `$${(data.total_gross_revenue || 0).toFixed(2)}`;
+    document.getElementById('profit-mtd').textContent =
+      `$${(data.total_net_profit || 0).toFixed(2)}`;
+    document.getElementById('tax-reserve').textContent =
+      `$${(data.tax_reserve_balance || 0).toFixed(2)}`;
+
+    const decrees = data.pending_decrees || 0;
+    document.getElementById('decrees').textContent = decrees;
+    document.getElementById('decrees').className =
+      `metric-value ${decrees > 0 ? 'red' : 'dim'}`;
+
+    setStatus('chancellor', 'online', 'ONLINE');
+  } else {
+    setStatus('chancellor', 'connecting', 'CONNECTING');
+  }
+}
+
+// ── Foreman / Print Status ────────────────────────────────────────────────────
+async function updateForeman() {
+  const data = await fetchJSON(`${FOREMAN_URL}/status`);
+  if (data) {
+    setStatus('foreman', 'online', 'ONLINE');
+    const active = data.print_active;
+    document.getElementById('print-idle').style.display   = active ? 'none'  : 'flex';
+    document.getElementById('print-active').style.display = active ? 'flex' : 'none';
+
+    if (active) {
+      document.getElementById('print-filename').textContent =
+        data.file_name || 'Unknown';
+      const pct = data.progress || 0;
+      document.getElementById('print-pct').textContent  = `${pct}%`;
+      document.getElementById('print-fill').style.width = `${pct}%`;
+      document.getElementById('print-remaining').textContent =
+        `${data.remaining_min || '--'} min remaining`;
+    }
+
+    document.getElementById('prints-today').textContent  = data.prints_today  || 0;
+    document.getElementById('prints-failed').textContent = data.prints_failed || 0;
+  } else {
+    setStatus('foreman', 'connecting', 'CONNECTING');
+  }
+}
+
+// ── Local Storage Stats (via nginx served JSON) ───────────────────────────────
+async function updateStorage() {
+  const data = await fetchJSON(`/data/storage-status.json`);
+  if (data) {
+    updateStorageBar('ssd',  data.ssd?.used_pct  || 0, `${data.ssd?.free_gb  || '--'} GB free of 500GB`);
+    updateStorageBar('hdd1', data.hdd1?.used_pct || 0, `${data.hdd1?.free_gb >= 1000 ? (data.hdd1.free_gb/1000).toFixed(1)+'TB' : data.hdd1?.free_gb+'GB' || '--'} free of 4TB`);
+    updateStorageBar('hdd2', data.hdd2?.used_pct || 0, `${data.hdd2?.free_gb >= 1000 ? (data.hdd2.free_gb/1000).toFixed(1)+'TB' : data.hdd2?.free_gb+'GB' || '--'} free of 4TB`);
+
+    const backup = data.backup_status;
+    const backupEl = document.getElementById('backup-status');
+    backupEl.textContent = backup === 'SUCCESS' ? '✓ Last night' : backup || 'Never';
+    backupEl.style.color = backup === 'SUCCESS' ? '#7dcc6c' : '#ff6666';
+  }
+}
+
+// ── Royal Decree ──────────────────────────────────────────────────────────────
+let currentDecree = null;
+
+async function checkDecrees() {
+  const data = await fetchJSON(`${CHANCELLOR_URL}/decrees/pending`);
+  if (data && data.decrees && data.decrees.length > 0 && !currentDecree) {
+    const decree = data.decrees[0];
+    currentDecree = decree.decree_id;
+    document.getElementById('decree-detail').textContent =
+      `${decree.action} — $${parseFloat(decree.amount).toFixed(2)} | ID: ${decree.decree_id}`;
+    document.getElementById('decree-banner').classList.add('visible');
+  }
+}
+
+async function resolveDecree(decision) {
+  if (!currentDecree) return;
+  await fetch(`${CHANCELLOR_URL}/decree/${currentDecree}/${decision}`, {
+    method: 'POST'
+  });
+  addTick(`${decision === 'APPROVE' ? '✅' : '❌'} Decree ${currentDecree} ${decision.toLowerCase()}d`);
+  document.getElementById('decree-banner').classList.remove('visible');
+  currentDecree = null;
+}
+
+// ── Demo / Fallback Mode ──────────────────────────────────────────────────────
+// When APIs aren't responding, show demo data so dashboard looks live
+function runDemoMode() {
+  updateStorageBar('ssd',  12, '440 GB free of 500GB');
+  updateStorageBar('hdd1',  2, '3.9 TB free of 4TB');
+  updateStorageBar('hdd2',  1, '3.96 TB free of 4TB');
+
+  document.getElementById('backup-status').textContent = 'Never (first boot)';
+  document.getElementById('backup-status').style.color = 'rgba(255,255,255,0.3)';
+  document.getElementById('ollama-size').textContent   = '~14 GB';
+  document.getElementById('fil-black').textContent     = '1000 g';
+  document.getElementById('fil-marble').textContent    = '-- g';
+  document.getElementById('stl-queue').textContent     = '0 files';
+  document.getElementById('stl-inspect').textContent   = '0 files';
+  document.getElementById('stl-approved').textContent  = '0 files';
+
+  // Demo ticker events
+  const events = [
+    '🐝 Hive dashboard initialized — Monday launch',
+    '🏥 Nurse agent standing by',
+    '🛡️ Supervisor monitoring active',
+    '⚖️ Chancellor ledger ready',
+    '🖨️ Foreman attempting printer connection...',
+    '📦 Quartermaster inventory: 1 spool loaded',
+  ];
+  events.reverse().forEach((e, i) => {
+    setTimeout(() => addTick(e), i * 800);
+  });
+}
+
+// ── Main Poll Loop ────────────────────────────────────────────────────────────
+async function poll() {
+  await Promise.all([
+    updateChancellor(),
+    updateForeman(),
+    updateStorage(),
+    checkDecrees(),
+  ]);
+}
+
+// Initial load
+runDemoMode();
+setTimeout(poll, 1000);
+
+// Poll every 30 seconds
+setInterval(poll, 30000);
+
+// Spend data placeholder
+document.getElementById('spend-today').textContent = '$0.00';
+</script>
+</body>
+</html>

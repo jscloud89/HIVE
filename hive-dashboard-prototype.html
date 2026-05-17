@@ -1,0 +1,933 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🐝 The Hive — Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/phaser/3.88.2/phaser.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Share+Tech+Mono&family=VT323&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #0d0d1a;
+    overflow: hidden;
+    font-family: 'Share Tech Mono', monospace;
+  }
+  #game-container { width: 100vw; height: 100vh; }
+
+  /* HUD Overlay */
+  #hud {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    pointer-events: none;
+    z-index: 100;
+  }
+
+  #top-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 24px;
+    background: linear-gradient(180deg, rgba(13,13,26,0.95) 0%, transparent 100%);
+    border-bottom: 1px solid rgba(244,168,37,0.2);
+  }
+
+  #hive-title {
+    font-family: 'Cinzel', serif;
+    font-size: 20px;
+    color: #F4A825;
+    text-shadow: 0 0 20px rgba(244,168,37,0.6);
+    letter-spacing: 3px;
+  }
+
+  #status-pills {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+  }
+
+  .pill {
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-family: 'Share Tech Mono', monospace;
+    border: 1px solid;
+  }
+
+  .pill-green {
+    background: rgba(74,124,63,0.2);
+    border-color: #4A7C3F;
+    color: #7dcc6c;
+  }
+
+  .pill-gold {
+    background: rgba(244,168,37,0.15);
+    border-color: #F4A825;
+    color: #F4A825;
+  }
+
+  .pill-blue {
+    background: rgba(64,176,176,0.15);
+    border-color: #40B0B0;
+    color: #40B0B0;
+  }
+
+  #time-display {
+    font-family: 'VT323', monospace;
+    font-size: 22px;
+    color: rgba(244,168,37,0.7);
+  }
+
+  /* Bottom data panel */
+  #bottom-panel {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    padding: 0 24px 16px;
+    pointer-events: none;
+  }
+
+  #data-cards {
+    display: flex;
+    gap: 8px;
+  }
+
+  .data-card {
+    background: rgba(13,13,26,0.88);
+    border: 1px solid rgba(244,168,37,0.25);
+    border-radius: 8px;
+    padding: 8px 14px;
+    font-size: 11px;
+    color: rgba(255,255,255,0.7);
+    backdrop-filter: blur(8px);
+  }
+
+  .data-card .label {
+    color: rgba(244,168,37,0.6);
+    font-size: 9px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 2px;
+  }
+
+  .data-card .value {
+    color: #F4A825;
+    font-size: 14px;
+    font-weight: bold;
+  }
+
+  .data-card .value.green { color: #7dcc6c; }
+  .data-card .value.red   { color: #CC2222; }
+  .data-card .value.blue  { color: #40B0B0; }
+
+  /* Event ticker */
+  #event-ticker {
+    position: fixed;
+    bottom: 16px;
+    right: 24px;
+    width: 320px;
+    pointer-events: none;
+  }
+
+  .tick-item {
+    background: rgba(13,13,26,0.88);
+    border-left: 2px solid #F4A825;
+    padding: 6px 10px;
+    margin-bottom: 4px;
+    font-size: 10px;
+    color: rgba(255,255,255,0.7);
+    font-family: 'VT323', monospace;
+    font-size: 13px;
+    border-radius: 0 4px 4px 0;
+    backdrop-filter: blur(8px);
+    animation: tickIn 0.3s ease;
+  }
+
+  @keyframes tickIn {
+    from { opacity: 0; transform: translateX(20px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+
+  /* Royal Decree overlay */
+  #decree-overlay {
+    position: fixed;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(13,13,26,0.96);
+    border: 2px solid #F4A825;
+    border-radius: 12px;
+    padding: 24px 32px;
+    text-align: center;
+    pointer-events: all;
+    display: none;
+    z-index: 200;
+    box-shadow: 0 0 60px rgba(244,168,37,0.4);
+    min-width: 320px;
+  }
+
+  #decree-overlay.visible { display: block; animation: decreeIn 0.4s ease; }
+
+  @keyframes decreeIn {
+    from { opacity: 0; transform: translate(-50%, -60%) scale(0.9); }
+    to   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  }
+
+  #decree-title {
+    font-family: 'Cinzel', serif;
+    color: #F4A825;
+    font-size: 18px;
+    margin-bottom: 12px;
+    text-shadow: 0 0 20px rgba(244,168,37,0.5);
+  }
+
+  #decree-body {
+    color: rgba(255,255,255,0.8);
+    font-size: 12px;
+    line-height: 1.6;
+    margin-bottom: 16px;
+    font-family: 'Share Tech Mono', monospace;
+  }
+
+  .decree-btn {
+    padding: 8px 24px;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    font-family: 'Cinzel', serif;
+    font-size: 13px;
+    margin: 0 6px;
+    pointer-events: all;
+    transition: all 0.2s;
+  }
+
+  .btn-approve {
+    background: #4A7C3F;
+    color: white;
+    border: 1px solid #7dcc6c;
+  }
+
+  .btn-approve:hover { background: #5a9c4f; box-shadow: 0 0 15px rgba(125,204,108,0.4); }
+
+  .btn-deny {
+    background: rgba(204,34,34,0.2);
+    color: #ff6666;
+    border: 1px solid #CC2222;
+  }
+
+  .btn-deny:hover { background: rgba(204,34,34,0.4); }
+</style>
+</head>
+<body>
+
+<!-- HUD -->
+<div id="hud">
+  <div id="top-bar">
+    <div id="hive-title">🐝 THE HIVE</div>
+    <div id="status-pills">
+      <div class="pill pill-green">9/9 BEES ACTIVE</div>
+      <div class="pill pill-gold">$0.00 TODAY</div>
+      <div class="pill pill-blue">SECURITY: GREEN</div>
+      <div class="pill pill-green">PRINT: IDLE</div>
+    </div>
+    <div id="time-display">--:--:--</div>
+  </div>
+</div>
+
+<!-- Bottom Data Panel -->
+<div id="bottom-panel">
+  <div id="data-cards">
+    <div class="data-card">
+      <div class="label">Revenue MTD</div>
+      <div class="value">$0.00</div>
+    </div>
+    <div class="data-card">
+      <div class="label">Venture Fund</div>
+      <div class="value blue">$0.00</div>
+    </div>
+    <div class="data-card">
+      <div class="label">Listings</div>
+      <div class="value">0 active</div>
+    </div>
+    <div class="data-card">
+      <div class="label">SOL</div>
+      <div class="value green">$--</div>
+    </div>
+    <div class="data-card">
+      <div class="label">ETH</div>
+      <div class="value blue">$--</div>
+    </div>
+    <div class="data-card">
+      <div class="label">Tax Reserve</div>
+      <div class="value">$0.00</div>
+    </div>
+  </div>
+</div>
+
+<!-- Event Ticker -->
+<div id="event-ticker"></div>
+
+<!-- Royal Decree Overlay -->
+<div id="decree-overlay">
+  <div id="decree-title">👑 ROYAL DECREE</div>
+  <div id="decree-body">Loading decree...</div>
+  <div>
+    <button class="decree-btn btn-approve" onclick="resolveDecree('APPROVE')">✓ APPROVE</button>
+    <button class="decree-btn btn-deny" onclick="resolveDecree('DENY')">✗ DENY</button>
+  </div>
+</div>
+
+<div id="game-container"></div>
+
+<script>
+// ─── Color Palette ────────────────────────────────────────────────────────────
+const C = {
+  honeyGold:   0xF4A825,
+  amberWarm:   0xE8821A,
+  hiveDark:    0x2C1810,
+  mossGreen:   0x4A7C3F,
+  skyDay:      0x87CEEB,
+  skyDusk:     0xFF8C69,
+  skyNight:    0x1A1A2E,
+  waterTeal:   0x40B0B0,
+  stoneGray:   0x8B8B7A,
+  securityRed: 0xCC2222,
+  wealthPurp:  0x7B4EA8,
+  nurseWhite:  0xF0F8E8,
+  royalGold:   0xFFD700,
+  grassGreen:  0x5A8A3A,
+  earthBrown:  0x8B6340,
+  leafDark:    0x3A6A2A,
+};
+
+// ─── Island Config ────────────────────────────────────────────────────────────
+const ISLANDS = [
+  {
+    id: 'queen',
+    label: "Queen's Hive",
+    emoji: '👑',
+    x: 0, y: 0,
+    color: C.honeyGold,
+    topColor: C.royalGold,
+    height: 90,
+    width: 160, depth: 140,
+    bee: { emoji: '👑', color: C.royalGold }
+  },
+  {
+    id: 'research',
+    label: 'Research',
+    emoji: '🔍',
+    x: 220, y: -120,
+    color: C.stoneGray,
+    topColor: C.mossGreen,
+    height: 65,
+    width: 130, depth: 110,
+    bee: { emoji: '🔍', color: 0xDDCC55 }
+  },
+  {
+    id: 'wealth',
+    label: 'Wealth',
+    emoji: '📈',
+    x: -220, y: -120,
+    color: C.earthBrown,
+    topColor: C.grassGreen,
+    height: 60,
+    width: 130, depth: 110,
+    bee: { emoji: '💰', color: C.wealthPurp }
+  },
+  {
+    id: 'chancellor',
+    label: 'Chancellor',
+    emoji: '⚖️',
+    x: -220, y: 120,
+    color: 0x706050,
+    topColor: 0x908070,
+    height: 55,
+    width: 125, depth: 105,
+    bee: { emoji: '⚖️', color: 0xC0A060 }
+  },
+  {
+    id: 'workshop',
+    label: 'Workshop',
+    emoji: '🏗️',
+    x: 220, y: 120,
+    color: 0x504030,
+    topColor: 0x706050,
+    height: 58,
+    width: 125, depth: 105,
+    bee: { emoji: '🔧', color: 0xAA8866 }
+  },
+  {
+    id: 'security',
+    label: 'Security',
+    emoji: '🛡️',
+    x: 360, y: 0,
+    color: 0x404060,
+    topColor: 0x505080,
+    height: 62,
+    width: 115, depth: 100,
+    bee: { emoji: '🛡️', color: 0x6688CC }
+  },
+];
+
+// ─── Phaser Scene ─────────────────────────────────────────────────────────────
+class MainScene extends Phaser.Scene {
+  constructor() { super({ key: 'MainScene' }); }
+
+  create() {
+    const W = this.scale.width;
+    const H = this.scale.height;
+
+    // Sky gradient background
+    this.createSky(W, H);
+
+    // World container — centered
+    this.world = this.add.container(W / 2, H / 2 - 30);
+
+    // Ambient particles
+    this.createAmbientParticles(W, H);
+
+    // Draw all islands
+    this.islandObjects = [];
+    this.beeObjects = [];
+
+    ISLANDS.forEach(cfg => {
+      this.createIsland(cfg);
+    });
+
+    // Nurse garden (ring around queen)
+    this.createNurseGarden();
+
+    // Golden bridge connections
+    this.createBridges();
+
+    // Camera slow pan
+    this.cameras.main.setZoom(1.0);
+    this.setupCameraControls(W, H);
+
+    // Animate bees
+    this.setupBeeAnimation();
+
+    // Particle systems
+    this.createParticleSystems();
+
+    // Clock
+    this.updateClock();
+    this.time.addEvent({ delay: 1000, callback: this.updateClock, callbackScope: this, loop: true });
+
+    // Demo events
+    this.scheduleDemoEvents();
+
+    // Subtle world rotation/pan
+    this.worldAngle = 0;
+  }
+
+  createSky(W, H) {
+    // Deep night-to-horizon gradient
+    const sky = this.add.graphics();
+    sky.fillGradientStyle(0x0d0d2e, 0x0d0d2e, 0x1a2040, 0x1a2040, 1);
+    sky.fillRect(0, 0, W, H);
+
+    // Stars
+    for (let i = 0; i < 120; i++) {
+      const x = Phaser.Math.Between(0, W);
+      const y = Phaser.Math.Between(0, H * 0.6);
+      const size = Math.random() * 1.5 + 0.3;
+      const alpha = Math.random() * 0.7 + 0.3;
+      const star = this.add.circle(x, y, size, 0xffffff, alpha);
+
+      // Twinkle
+      this.tweens.add({
+        targets: star,
+        alpha: { from: alpha, to: alpha * 0.2 },
+        duration: Phaser.Math.Between(1500, 4000),
+        yoyo: true,
+        repeat: -1,
+        delay: Phaser.Math.Between(0, 3000)
+      });
+    }
+
+    // Horizon glow
+    const glow = this.add.graphics();
+    glow.fillGradientStyle(0x0d0d2e, 0x0d0d2e, 0xE8821A, 0xE8821A, 0, 0, 0.08, 0.08);
+    glow.fillRect(0, H * 0.55, W, H * 0.45);
+
+    // Ground mist
+    const mist = this.add.graphics();
+    mist.fillGradientStyle(0x40B0B0, 0x40B0B0, 0x40B0B0, 0x40B0B0, 0, 0, 0.04, 0.04);
+    mist.fillRect(0, H * 0.65, W, H * 0.35);
+  }
+
+  createIsland(cfg) {
+    const g = this.add.graphics();
+    const x = cfg.x;
+    const y = cfg.y;
+    const w = cfg.width;
+    const d = cfg.depth;
+    const h = cfg.height;
+    const hw = w / 2;
+    const hd = d / 2;
+
+    // ── Isometric box ────────────────────────────────────────
+    // Top face (lightest)
+    g.fillStyle(cfg.topColor, 1);
+    g.beginPath();
+    g.moveTo(x,      y - h);
+    g.lineTo(x + hw, y - h + hd / 2);
+    g.lineTo(x,      y - h + hd);
+    g.lineTo(x - hw, y - h + hd / 2);
+    g.closePath();
+    g.fillPath();
+
+    // Top face highlight
+    g.fillStyle(0xffffff, 0.08);
+    g.beginPath();
+    g.moveTo(x,      y - h);
+    g.lineTo(x + hw * 0.5, y - h + hd * 0.25);
+    g.lineTo(x,      y - h + hd * 0.5);
+    g.lineTo(x - hw * 0.5, y - h + hd * 0.25);
+    g.closePath();
+    g.fillPath();
+
+    // Left face (medium)
+    const leftColor = Phaser.Display.Color.IntegerToColor(cfg.color);
+    leftColor.darken(15);
+    g.fillStyle(leftColor.color, 1);
+    g.beginPath();
+    g.moveTo(x - hw, y - h + hd / 2);
+    g.lineTo(x,      y - h + hd);
+    g.lineTo(x,      y + hd);
+    g.lineTo(x - hw, y + hd / 2);
+    g.closePath();
+    g.fillPath();
+
+    // Right face (darkest)
+    const rightColor = Phaser.Display.Color.IntegerToColor(cfg.color);
+    rightColor.darken(30);
+    g.fillStyle(rightColor.color, 1);
+    g.beginPath();
+    g.moveTo(x + hw, y - h + hd / 2);
+    g.lineTo(x,      y - h + hd);
+    g.lineTo(x,      y + hd);
+    g.lineTo(x + hw, y + hd / 2);
+    g.closePath();
+    g.fillPath();
+
+    // Edge highlights
+    g.lineStyle(1, 0xffffff, 0.12);
+    g.beginPath();
+    g.moveTo(x, y - h);
+    g.lineTo(x + hw, y - h + hd / 2);
+    g.lineTo(x, y - h + hd);
+    g.lineTo(x - hw, y - h + hd / 2);
+    g.closePath();
+    g.strokePath();
+
+    // ── Structure on top ─────────────────────────────────────
+    this.createIslandStructure(g, cfg, x, y, w, d, h);
+
+    // ── Label ─────────────────────────────────────────────────
+    const label = this.add.text(x, y - h - 20, `${cfg.emoji} ${cfg.label}`, {
+      fontFamily: 'Cinzel',
+      fontSize: '11px',
+      color: '#F4A825',
+      alpha: 0.8,
+      stroke: '#0d0d1a',
+      strokeThickness: 3
+    }).setOrigin(0.5, 1);
+
+    // Floating label bob
+    this.tweens.add({
+      targets: label,
+      y: label.y - 4,
+      duration: 2000 + Math.random() * 1000,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut'
+    });
+
+    this.world.add([g, label]);
+
+    // ── Bee sprite ────────────────────────────────────────────
+    this.createBee(cfg, x, y - h - 35);
+
+    this.islandObjects.push({ cfg, g, label });
+  }
+
+  createIslandStructure(g, cfg, x, y, w, d, h) {
+    const hw = w / 2;
+    const hd = d / 2;
+    const ty = y - h; // top of island
+
+    if (cfg.id === 'queen') {
+      // Hexagonal hive tower
+      const levels = 3;
+      for (let i = 0; i < levels; i++) {
+        const scale = 1 - i * 0.25;
+        const lh = 22 * scale;
+        const lw = 40 * scale;
+        const ld = 30 * scale;
+        const ly = ty + hd / 2 - i * 22;
+
+        g.fillStyle(C.amberWarm, 1);
+        g.beginPath();
+        g.moveTo(x, ly - lh);
+        g.lineTo(x + lw, ly - lh + ld / 2);
+        g.lineTo(x, ly - lh + ld);
+        g.lineTo(x - lw, ly - lh + ld / 2);
+        g.closePath();
+        g.fillPath();
+
+        // Honeycomb pattern suggestion
+        g.fillStyle(C.honeyGold, 1);
+        for (let j = 0; j < 3; j++) {
+          g.fillCircle(x + (j - 1) * 10, ly - lh / 2 + ld / 4, 3);
+        }
+      }
+      // Crown on top
+      g.fillStyle(C.royalGold, 1);
+      g.fillStar(x, ty + hd / 2 - levels * 22 - 8, 5, 8, 4, 0);
+
+    } else if (cfg.id === 'research') {
+      // Library tower
+      g.fillStyle(0x706858, 1);
+      g.beginPath();
+      g.moveTo(x - 15, ty + hd/2);
+      g.lineTo(x, ty + hd/2 - 8);
+      g.lineTo(x + 15, ty + hd/2);
+      g.lineTo(x + 15, ty + hd/2 - 45);
+      g.lineTo(x, ty + hd/2 - 53);
+      g.lineTo(x - 15, ty + hd/2 - 45);
+      g.closePath();
+      g.fillPath();
+      // Window
+      g.fillStyle(C.honeyGold, 0.7);
+      g.fillRect(x - 4, ty + hd/2 - 35, 8, 10);
+      // Pointy roof
+      g.fillStyle(0x404030, 1);
+      g.fillTriangle(x - 18, ty + hd/2 - 45, x, ty + hd/2 - 65, x + 18, ty + hd/2 - 45);
+
+    } else if (cfg.id === 'wealth') {
+      // Flower garden dots
+      const flowerColors = [0xAA44CC, 0x4488CC, 0xFF8822];
+      for (let i = 0; i < 12; i++) {
+        const fx = x + Phaser.Math.Between(-40, 40);
+        const fy = ty + hd / 2 + Phaser.Math.Between(-10, 20);
+        g.fillStyle(flowerColors[i % 3], 0.8);
+        g.fillCircle(fx, fy, 4);
+        g.fillStyle(0xFFDD44, 0.9);
+        g.fillCircle(fx, fy, 2);
+      }
+      // Market stall
+      g.fillStyle(0x886644, 1);
+      g.fillRect(x + 10, ty + hd/2 - 25, 30, 20);
+      g.fillStyle(C.honeyGold, 0.8);
+      g.fillRect(x + 8, ty + hd/2 - 28, 34, 6);
+
+    } else if (cfg.id === 'chancellor') {
+      // Stone vault
+      g.fillStyle(0x605040, 1);
+      g.fillRect(x - 20, ty + hd/2 - 30, 40, 28);
+      g.fillStyle(0x504030, 1);
+      g.fillCircle(x, ty + hd/2 - 30, 16);
+      // Heavy door
+      g.fillStyle(0x302010, 1);
+      g.fillRect(x - 8, ty + hd/2 - 16, 16, 14);
+      // Honey jars
+      for (let i = 0; i < 3; i++) {
+        g.fillStyle(C.amberWarm, 0.9);
+        g.fillEllipse(x - 18 + i * 18, ty + hd/2 + 5, 10, 14);
+      }
+
+    } else if (cfg.id === 'workshop') {
+      // Printer / forge building
+      g.fillStyle(0x403020, 1);
+      g.fillRect(x - 22, ty + hd/2 - 28, 44, 26);
+      // Printer window (glowing blue)
+      g.fillStyle(0x224488, 0.9);
+      g.fillRect(x - 14, ty + hd/2 - 22, 18, 14);
+      g.fillStyle(0x4488FF, 0.5);
+      g.fillRect(x - 14, ty + hd/2 - 22, 18, 4);
+      // Chimney
+      g.fillStyle(0x302020, 1);
+      g.fillRect(x + 10, ty + hd/2 - 38, 8, 14);
+
+    } else if (cfg.id === 'security') {
+      // Fortress walls
+      g.fillStyle(0x303050, 1);
+      g.fillRect(x - 25, ty + hd/2 - 20, 50, 18);
+      // Battlements
+      for (let i = 0; i < 5; i++) {
+        g.fillRect(x - 22 + i * 11, ty + hd/2 - 26, 7, 8);
+      }
+      // Watchtower
+      g.fillStyle(0x252545, 1);
+      g.fillRect(x - 8, ty + hd/2 - 42, 16, 24);
+      // Searchlight
+      g.fillStyle(0xFFFF88, 0.9);
+      g.fillCircle(x, ty + hd/2 - 44, 4);
+    }
+  }
+
+  createNurseGarden() {
+    // Decorative flower ring around queen island
+    const g = this.add.graphics();
+    const cx = 0, cy = 0;
+    for (let i = 0; i < 24; i++) {
+      const angle = (i / 24) * Math.PI * 2;
+      const r = 120;
+      const fx = cx + Math.cos(angle) * r;
+      const fy = cy + Math.sin(angle) * r * 0.4 - 30;
+      const colors = [0xFF9988, 0xFFDD44, 0x88FF88, 0xFFAAFF];
+      g.fillStyle(colors[i % colors.length], 0.7);
+      g.fillCircle(fx, fy, 5);
+      g.fillStyle(0xFFFFFF, 0.9);
+      g.fillCircle(fx, fy, 2);
+    }
+    this.world.add(g);
+  }
+
+  createBridges() {
+    const g = this.add.graphics();
+    const connections = [
+      [0, 0, 220, -120],
+      [0, 0, -220, -120],
+      [0, 0, -220, 120],
+      [0, 0, 220, 120],
+      [0, 0, 360, 0],
+    ];
+    connections.forEach(([x1, y1, x2, y2]) => {
+      // Bridge line (dashed honey color)
+      g.lineStyle(2, C.honeyGold, 0.25);
+      g.beginPath();
+      g.moveTo(x1, y1 - 20);
+      g.lineTo(x2, y2 - 20);
+      g.strokePath();
+
+      // Dots along bridge
+      const steps = 6;
+      for (let i = 1; i < steps; i++) {
+        const t = i / steps;
+        const bx = x1 + (x2 - x1) * t;
+        const by = y1 + (y2 - y1) * t - 20;
+        g.fillStyle(C.honeyGold, 0.3);
+        g.fillCircle(bx, by, 2);
+      }
+    });
+    this.world.add(g);
+  }
+
+  createBee(cfg, startX, startY) {
+    const bee = this.add.text(startX, startY, cfg.bee.emoji, {
+      fontSize: cfg.id === 'queen' ? '22px' : '16px'
+    }).setOrigin(0.5);
+
+    // Hover bob
+    this.tweens.add({
+      targets: bee,
+      y: bee.y - 6,
+      duration: 1500 + Math.random() * 800,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut',
+      delay: Math.random() * 1000
+    });
+
+    // Subtle horizontal sway
+    this.tweens.add({
+      targets: bee,
+      x: bee.x + 5,
+      duration: 2200 + Math.random() * 800,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut',
+      delay: Math.random() * 800
+    });
+
+    this.world.add(bee);
+    this.beeObjects.push({ cfg, bee, homeX: startX, homeY: startY });
+  }
+
+  createAmbientParticles(W, H) {
+    // Floating dust motes
+    for (let i = 0; i < 30; i++) {
+      const mote = this.add.circle(
+        Phaser.Math.Between(0, W),
+        Phaser.Math.Between(H * 0.3, H * 0.8),
+        Math.random() * 2 + 0.5,
+        0xF4A825,
+        Math.random() * 0.3 + 0.05
+      );
+      this.tweens.add({
+        targets: mote,
+        y: mote.y - Phaser.Math.Between(40, 120),
+        x: mote.x + Phaser.Math.Between(-30, 30),
+        alpha: 0,
+        duration: Phaser.Math.Between(4000, 9000),
+        repeat: -1,
+        delay: Phaser.Math.Between(0, 5000),
+        onRepeat: () => {
+          mote.setPosition(
+            Phaser.Math.Between(0, W),
+            Phaser.Math.Between(H * 0.6, H * 0.9)
+          );
+          mote.setAlpha(Math.random() * 0.3 + 0.05);
+        }
+      });
+    }
+  }
+
+  createParticleSystems() {
+    // Workshop smoke emitter (when printing)
+    this.smokeActive = false;
+    this.smokeParticles = [];
+  }
+
+  setupCameraControls(W, H) {
+    // Subtle auto-pan
+    this.cameraPanTime = 0;
+    this.baseCamX = W / 2;
+    this.baseCamY = H / 2;
+  }
+
+  setupBeeAnimation() {
+    // Nurse bee does grand circuit
+    const nurseBee = this.add.text(0, -80, '🏥', { fontSize: '18px' }).setOrigin(0.5);
+    this.world.add(nurseBee);
+
+    // Circular patrol path
+    const nurseRadius = 110;
+    this.tweens.add({
+      targets: nurseBee,
+      duration: 12000,
+      repeat: -1,
+      ease: 'Linear',
+      onUpdate: (tween) => {
+        const t = tween.progress * Math.PI * 2;
+        nurseBee.x = Math.cos(t) * nurseRadius;
+        nurseBee.y = Math.sin(t) * nurseRadius * 0.35 - 50;
+      }
+    });
+
+    // Supervisor patrol on security island
+    const superBee = this.add.text(360, -95, '🛡️', { fontSize: '14px' }).setOrigin(0.5);
+    this.world.add(superBee);
+    this.tweens.add({
+      targets: superBee,
+      x: 400,
+      duration: 2000,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut'
+    });
+  }
+
+  updateClock() {
+    const now = new Date();
+    const h = String(now.getHours()).padStart(2, '0');
+    const m = String(now.getMinutes()).padStart(2, '0');
+    const s = String(now.getSeconds()).padStart(2, '0');
+    const el = document.getElementById('time-display');
+    if (el) el.textContent = `${h}:${m}:${s}`;
+  }
+
+  scheduleDemoEvents() {
+    // Demo event ticker
+    const events = [
+      { delay: 2000,  text: '🏥 Nurse morning briefing complete' },
+      { delay: 5000,  text: '🔍 Scout: researching Dark Academia niche' },
+      { delay: 9000,  text: '📈 Forager: SOL up 3.2% — bullish signal' },
+      { delay: 13000, text: '👑 Queen evaluating waggle dance — vigor 8.4' },
+      { delay: 17000, text: '👑 ROYAL DECREE: Dark Academia approved' },
+      { delay: 21000, text: '🐝 Worker: generating 5 listings' },
+      { delay: 25000, text: '🖨️ Foreman: print started — gear_knob_v3.stl' },
+      { delay: 29000, text: '🛡️ Supervisor: all systems nominal' },
+      { delay: 33000, text: '💰 Revenue: $24.99 logged — Honey Split applied' },
+    ];
+
+    events.forEach(({ delay, text }) => {
+      this.time.delayedCall(delay, () => this.addTickEvent(text));
+    });
+
+    // Demo decree after 18s
+    this.time.delayedCall(18000, () => {
+      showDecree(
+        'Worker bee requests: Deploy 5 Dark Academia listings to Etsy.',
+        'Estimated cost: $0.08',
+        'DEC-A1B2C3D4'
+      );
+    });
+  }
+
+  addTickEvent(text) {
+    const ticker = document.getElementById('event-ticker');
+    if (!ticker) return;
+    const item = document.createElement('div');
+    item.className = 'tick-item';
+    const time = new Date();
+    const ts = `${String(time.getHours()).padStart(2,'0')}:${String(time.getMinutes()).padStart(2,'0')}`;
+    item.textContent = `[${ts}] ${text}`;
+    ticker.insertBefore(item, ticker.firstChild);
+    // Keep max 5 items
+    while (ticker.children.length > 5) {
+      ticker.removeChild(ticker.lastChild);
+    }
+  }
+
+  update(time, delta) {
+    // Gentle world breathing — very subtle scale pulse
+    this.cameraPanTime += delta * 0.0001;
+    const scale = 1 + Math.sin(this.cameraPanTime) * 0.005;
+    this.world.setScale(scale);
+  }
+}
+
+// ─── Game Config ──────────────────────────────────────────────────────────────
+const config = {
+  type: Phaser.AUTO,
+  parent: 'game-container',
+  width: window.innerWidth,
+  height: window.innerHeight,
+  backgroundColor: '#0d0d1a',
+  transparent: false,
+  scene: [MainScene],
+  scale: {
+    mode: Phaser.Scale.RESIZE,
+    autoCenter: Phaser.Scale.CENTER_BOTH
+  }
+};
+
+const game = new Phaser.Game(config);
+
+// Resize handler
+window.addEventListener('resize', () => {
+  game.scale.resize(window.innerWidth, window.innerHeight);
+});
+
+// ─── Royal Decree UI ─────────────────────────────────────────────────────────
+let currentDecreeId = null;
+
+function showDecree(action, cost, decreeId) {
+  currentDecreeId = decreeId;
+  document.getElementById('decree-body').innerHTML =
+    `<strong>Action:</strong> ${action}<br>
+     <strong>${cost}</strong><br><br>
+     <em>Decree ID: ${decreeId}</em>`;
+  document.getElementById('decree-overlay').classList.add('visible');
+}
+
+function resolveDecree(decision) {
+  document.getElementById('decree-overlay').classList.remove('visible');
+  const scene = game.scene.getScene('MainScene');
+  if (scene) {
+    const msg = decision === 'APPROVE'
+      ? `✅ Decree ${currentDecreeId} approved`
+      : `❌ Decree ${currentDecreeId} denied`;
+    scene.addTickEvent(msg);
+  }
+  currentDecreeId = null;
+}
+</script>
+</body>
+</html>
