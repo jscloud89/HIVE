@@ -1,0 +1,21 @@
+{
+  "niche": "Articulated birds - flexi-print breeder display",
+  "vigor_score": 8.2,
+  "confidence_score": 74,
+  "platform": "Etsy",
+  "reported_by": "Scout",
+  "report_date": "2026-05-17",
+  "evidence": {
+    "monthly_searches": 4200,
+    "avg_selling_price": 18.50,
+    "top_competitor_reviews": 847,
+    "review_velocity": "32/month",
+    "estimated_machine_hours": 1.4,
+    "filament": "Marble White PLA",
+    "bird_safety_check": "passed",
+    "seasonal_flag": false,
+    "margin_estimate_pct": 68
+  },
+  "scout_notes": "Breeder community actively buying. High repeat rate observed. Marble White colorway is differentiated vs competitors using standard colors. No dominant single seller — market fragmented.",
+  "recommended_action": "deploy"
+}
