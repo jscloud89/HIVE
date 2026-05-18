@@ -16,88 +16,110 @@
 }
 html,body{width:100%;height:100%;background:var(--bg);overflow:hidden;}
 body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.04) 2px,rgba(0,0,0,0.04) 4px);pointer-events:none;z-index:1000;}
-canvas#world{position:fixed;inset:0;width:100%;height:100%;}
+canvas#world{position:fixed;inset:0;width:100%;height:100%;cursor:grab;}
+canvas#world.dragging{cursor:grabbing;}
 #hud{position:fixed;inset:0;pointer-events:none;z-index:100;font-family:var(--mono);}
-#top-bar{position:absolute;top:0;left:0;right:0;height:48px;background:rgba(8,8,15,0.9);border-bottom:1px solid rgba(244,168,37,0.3);display:flex;align-items:center;justify-content:space-between;padding:0 20px;backdrop-filter:blur(12px);}
-.hive-logo{font-family:var(--head);font-size:17px;color:var(--gold);letter-spacing:4px;text-shadow:0 0 20px rgba(244,168,37,0.5);}
-.hive-logo span{color:var(--text-dim);font-size:10px;letter-spacing:2px;}
-#live-clock{font-family:var(--vt);font-size:30px;color:var(--gold);text-shadow:0 0 12px rgba(244,168,37,0.4);letter-spacing:3px;}
-.top-status{display:flex;gap:16px;align-items:center;font-size:11px;color:var(--text-dim);letter-spacing:1px;}
+
+/* TOP BAR */
+#top-bar{position:absolute;top:0;left:0;right:0;height:44px;background:rgba(8,8,15,0.92);border-bottom:1px solid rgba(244,168,37,0.25);display:flex;align-items:center;justify-content:space-between;padding:0 16px;backdrop-filter:blur(12px);}
+.hive-logo{font-family:var(--head);font-size:15px;color:var(--gold);letter-spacing:3px;text-shadow:0 0 15px rgba(244,168,37,0.5);}
+.hive-logo span{color:var(--text-dim);font-size:9px;letter-spacing:2px;}
+#live-clock{font-family:var(--vt);font-size:26px;color:var(--gold);letter-spacing:3px;}
+.top-status{display:flex;gap:12px;align-items:center;font-size:10px;color:var(--text-dim);letter-spacing:1px;}
 .sdot{width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green);display:inline-block;animation:pulse 2s ease-in-out infinite;}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
-#left-panel{position:absolute;top:56px;left:0;width:186px;background:rgba(8,8,15,0.87);border-right:1px solid rgba(244,168,37,0.18);padding:10px;backdrop-filter:blur(12px);pointer-events:all;max-height:calc(100vh - 100px);overflow-y:auto;}
-.ptitle{font-family:var(--bar);font-size:9px;font-weight:600;letter-spacing:4px;color:var(--gold-dim);text-transform:uppercase;margin-bottom:8px;border-bottom:1px solid rgba(244,168,37,0.12);padding-bottom:5px;}
-.arow{display:flex;align-items:center;gap:6px;padding:3px 6px;margin-bottom:1px;}
-.arow:hover{background:rgba(244,168,37,0.05);}
+
+/* LEFT PANEL */
+#left-panel{position:absolute;top:44px;left:0;width:170px;background:rgba(8,8,15,0.9);border-right:1px solid rgba(244,168,37,0.15);padding:10px;backdrop-filter:blur(12px);pointer-events:all;max-height:calc(100vh - 80px);overflow-y:auto;}
+.ptitle{font-family:var(--bar);font-size:9px;font-weight:700;letter-spacing:3px;color:var(--gold-dim);text-transform:uppercase;margin-bottom:8px;border-bottom:1px solid rgba(244,168,37,0.1);padding-bottom:4px;}
+.arow{display:flex;align-items:center;gap:6px;padding:3px 6px;margin-bottom:2px;border-radius:2px;}
+.arow:hover{background:rgba(244,168,37,0.06);}
 .adot{width:5px;height:5px;border-radius:50%;flex-shrink:0;}
 .adot.on{background:var(--green);box-shadow:0 0 5px var(--green);animation:pulse 2s ease-in-out infinite;}
 .adot.si{background:var(--text-dim);}
 .adot.p2{background:var(--blue);}
-.aname{font-size:10px;color:var(--text-dim);text-transform:lowercase;flex:1;}
+.aname{font-size:10px;color:var(--text-dim);flex:1;}
 .arow.on .aname{color:var(--text);}
 .atag{font-size:8px;letter-spacing:1px;text-transform:uppercase;padding:1px 4px;}
 .atag.on{color:var(--green);border:1px solid rgba(57,217,138,0.3);}
-.atag.si{color:var(--text-dim);border:1px solid rgba(90,100,120,0.2);}
+.atag.si{color:var(--text-dim);border:1px solid rgba(90,100,120,0.18);}
 .atag.p2{color:var(--blue);border:1px solid rgba(74,158,255,0.3);}
-#right-panel{position:absolute;top:56px;right:0;width:206px;background:rgba(8,8,15,0.87);border-left:1px solid rgba(244,168,37,0.18);padding:12px;backdrop-filter:blur(12px);pointer-events:all;}
+
+/* RIGHT PANEL */
+#right-panel{position:absolute;top:44px;right:0;width:200px;background:rgba(8,8,15,0.9);border-left:1px solid rgba(244,168,37,0.15);padding:12px;backdrop-filter:blur(12px);pointer-events:all;}
 .frow{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px;}
 .flbl{font-size:9px;color:var(--text-dim);letter-spacing:2px;text-transform:uppercase;}
-.fval{font-family:var(--vt);font-size:24px;color:var(--gold);line-height:1;}
+.fval{font-family:var(--vt);font-size:22px;color:var(--gold);line-height:1;}
 .fval.g{color:var(--green);}
-.recwrap{margin:10px 0 8px;}
-.reclbl{display:flex;justify-content:space-between;font-size:9px;color:var(--text-dim);letter-spacing:1px;margin-bottom:4px;text-transform:uppercase;}
-.recbar{height:5px;background:rgba(244,168,37,0.08);border:1px solid rgba(244,168,37,0.18);overflow:hidden;}
+.recwrap{margin:8px 0;}
+.reclbl{display:flex;justify-content:space-between;font-size:9px;color:var(--text-dim);margin-bottom:3px;letter-spacing:1px;text-transform:uppercase;}
+.recbar{height:4px;background:rgba(244,168,37,0.08);border:1px solid rgba(244,168,37,0.15);overflow:hidden;}
 .recfill{height:100%;background:linear-gradient(90deg,var(--gold-dim),var(--gold));transition:width 2s ease;}
-.hrow{display:flex;align-items:center;gap:6px;margin-bottom:5px;}
-.hlbl{font-size:9px;color:var(--text-dim);width:68px;text-transform:uppercase;letter-spacing:1px;}
-.hbarw{flex:1;height:4px;background:rgba(255,255,255,0.04);border-radius:2px;overflow:hidden;}
+.hrow{display:flex;align-items:center;gap:5px;margin-bottom:4px;}
+.hlbl{font-size:9px;color:var(--text-dim);width:62px;text-transform:uppercase;letter-spacing:1px;}
+.hbarw{flex:1;height:3px;background:rgba(255,255,255,0.04);border-radius:2px;overflow:hidden;}
 .hbarf{height:100%;border-radius:2px;transition:width 1s ease;}
-.hamt{font-family:var(--vt);font-size:14px;color:var(--gold);width:36px;text-align:right;}
-#bottom-bar{position:absolute;bottom:0;left:0;right:0;height:34px;background:rgba(8,8,15,0.9);border-top:1px solid rgba(244,168,37,0.18);display:flex;align-items:center;overflow:hidden;backdrop-filter:blur(12px);}
-.tlbl{font-family:var(--bar);font-size:9px;font-weight:700;letter-spacing:3px;color:var(--gold);padding:0 12px;white-space:nowrap;border-right:1px solid rgba(244,168,37,0.18);height:100%;display:flex;align-items:center;}
+.hamt{font-family:var(--vt);font-size:13px;color:var(--gold);width:34px;text-align:right;}
+
+/* BOTTOM */
+#bottom-bar{position:absolute;bottom:0;left:0;right:0;height:32px;background:rgba(8,8,15,0.92);border-top:1px solid rgba(244,168,37,0.15);display:flex;align-items:center;overflow:hidden;backdrop-filter:blur(12px);}
+.tlbl{font-family:var(--bar);font-size:9px;font-weight:700;letter-spacing:3px;color:var(--gold);padding:0 10px;white-space:nowrap;border-right:1px solid rgba(244,168,37,0.15);height:100%;display:flex;align-items:center;}
 .ttrack{flex:1;overflow:hidden;height:100%;display:flex;align-items:center;}
-.tinner{display:flex;gap:40px;animation:tick 55s linear infinite;white-space:nowrap;}
+.tinner{display:flex;gap:40px;animation:tick 60s linear infinite;white-space:nowrap;}
 @keyframes tick{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
-.titem{font-size:11px;color:var(--text-dim);display:flex;align-items:center;gap:8px;}
-.tagent{color:var(--gold);text-transform:uppercase;font-size:10px;}
-#market-panel{position:absolute;bottom:42px;left:50%;transform:translateX(-50%);background:rgba(8,8,15,0.92);border:1px solid rgba(244,168,37,0.28);padding:10px 20px;display:flex;align-items:center;gap:20px;backdrop-filter:blur(12px);pointer-events:all;min-width:460px;}
-.mniche{font-family:var(--bar);font-size:13px;font-weight:600;color:var(--text);flex:1;letter-spacing:0.5px;}
-.vigor{font-family:var(--vt);font-size:34px;color:var(--gold-bright);text-shadow:0 0 15px rgba(244,168,37,0.4);line-height:1;}
-.vigorlbl{font-size:9px;color:var(--text-dim);letter-spacing:2px;text-align:center;text-transform:uppercase;}
-.mtag{font-size:9px;letter-spacing:2px;padding:3px 8px;border:1px solid rgba(244,168,37,0.35);color:var(--gold);text-transform:uppercase;}
+.titem{font-size:10px;color:var(--text-dim);display:flex;align-items:center;gap:8px;}
+.tagent{color:var(--gold);text-transform:uppercase;font-size:9px;}
+
+/* MARKET */
+#market-panel{position:absolute;bottom:40px;left:50%;transform:translateX(-50%);background:rgba(8,8,15,0.93);border:1px solid rgba(244,168,37,0.25);padding:9px 18px;display:flex;align-items:center;gap:18px;backdrop-filter:blur(12px);pointer-events:all;white-space:nowrap;}
+.mniche{font-family:var(--bar);font-size:12px;font-weight:600;color:var(--text);flex:1;letter-spacing:0.5px;max-width:320px;overflow:hidden;text-overflow:ellipsis;}
+.vigor{font-family:var(--vt);font-size:30px;color:var(--gold-bright);text-shadow:0 0 12px rgba(244,168,37,0.4);line-height:1;}
+.vigorlbl{font-size:8px;color:var(--text-dim);letter-spacing:2px;text-align:center;text-transform:uppercase;}
+.mtag{font-size:9px;letter-spacing:1px;padding:2px 7px;border:1px solid rgba(244,168,37,0.3);color:var(--gold);text-transform:uppercase;}
 .mtag.g{border-color:rgba(57,217,138,0.4);color:var(--green);}
-#tooltip{position:fixed;display:none;background:rgba(8,8,15,0.96);border:1px solid rgba(244,168,37,0.4);padding:10px 14px;pointer-events:none;z-index:300;max-width:200px;}
-.ttname{font-family:var(--bar);font-size:12px;font-weight:700;letter-spacing:2px;color:var(--gold);margin-bottom:5px;}
+
+/* ZOOM CONTROLS */
+#zoom-ctrl{position:absolute;bottom:42px;left:180px;display:flex;flex-direction:column;gap:4px;pointer-events:all;}
+.zbtn{width:28px;height:28px;background:rgba(8,8,15,0.9);border:1px solid rgba(244,168,37,0.25);color:var(--gold);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background 0.2s;}
+.zbtn:hover{background:rgba(244,168,37,0.12);}
+
+/* TOOLTIP */
+#tooltip{position:fixed;display:none;background:rgba(8,8,15,0.97);border:1px solid rgba(244,168,37,0.4);padding:10px 14px;pointer-events:none;z-index:300;max-width:180px;}
+.ttname{font-family:var(--bar);font-size:13px;font-weight:700;letter-spacing:2px;color:var(--gold);margin-bottom:5px;}
 .ttagents{font-size:10px;color:var(--text-dim);line-height:1.7;white-space:pre-line;}
-#decree-overlay{position:fixed;inset:0;background:rgba(0,0,0,0);z-index:500;display:flex;align-items:flex-start;justify-content:center;padding-top:56px;pointer-events:none;transition:background 0.5s;}
+
+/* DECREE */
+#decree-overlay{position:fixed;inset:0;background:rgba(0,0,0,0);z-index:500;display:flex;align-items:flex-start;justify-content:center;padding-top:44px;pointer-events:none;transition:background 0.5s;}
 #decree-overlay.active{background:rgba(0,0,0,0.65);pointer-events:all;}
-#decree-panel{background:linear-gradient(135deg,#0d0d1a,#1a1000);border:2px solid var(--gold);padding:28px 36px;max-width:480px;width:90%;transform:translateY(-120%);transition:transform 0.6s cubic-bezier(0.175,0.885,0.32,1.275);box-shadow:0 0 60px rgba(244,168,37,0.25);text-align:center;pointer-events:all;}
+#decree-panel{background:linear-gradient(135deg,#0d0d1a,#1a1000);border:2px solid var(--gold);padding:24px 32px;max-width:460px;width:90%;transform:translateY(-120%);transition:transform 0.6s cubic-bezier(0.175,0.885,0.32,1.275);box-shadow:0 0 50px rgba(244,168,37,0.22);text-align:center;pointer-events:all;}
 #decree-overlay.active #decree-panel{transform:translateY(0);}
-.dcrown{font-size:40px;animation:cp 1.5s ease-in-out infinite;display:block;margin-bottom:8px;}
-@keyframes cp{0%,100%{filter:drop-shadow(0 0 8px rgba(244,168,37,0.8));transform:scale(1)}50%{filter:drop-shadow(0 0 22px rgba(244,168,37,1));transform:scale(1.08)}}
-.dtitle{font-family:var(--head);font-size:13px;letter-spacing:6px;color:var(--gold);margin-bottom:16px;}
-.dcontent{font-family:var(--mono);font-size:11px;color:var(--text);line-height:1.8;margin-bottom:14px;text-align:left;background:rgba(244,168,37,0.04);border:1px solid rgba(244,168,37,0.12);padding:12px 16px;}
-.dreason{font-size:11px;color:var(--text-dim);font-style:italic;line-height:1.6;margin-bottom:18px;text-align:left;}
-.dbtns{display:flex;gap:12px;justify-content:center;}
-.dbtn{font-family:var(--head);font-size:10px;letter-spacing:3px;padding:10px 28px;border:none;cursor:pointer;transition:all 0.2s;pointer-events:all;}
-.dbtn.ok{background:rgba(57,217,138,0.12);border:1px solid var(--green);color:var(--green);}
+.dcrown{font-size:36px;animation:cp 1.5s ease-in-out infinite;display:block;margin-bottom:6px;}
+@keyframes cp{0%,100%{filter:drop-shadow(0 0 8px rgba(244,168,37,0.8));transform:scale(1)}50%{filter:drop-shadow(0 0 20px rgba(244,168,37,1));transform:scale(1.06)}}
+.dtitle{font-family:var(--head);font-size:12px;letter-spacing:5px;color:var(--gold);margin-bottom:14px;}
+.dcontent{font-family:var(--mono);font-size:11px;color:var(--text);line-height:1.8;margin-bottom:12px;text-align:left;background:rgba(244,168,37,0.04);border:1px solid rgba(244,168,37,0.1);padding:10px 14px;}
+.dreason{font-size:10px;color:var(--text-dim);font-style:italic;line-height:1.6;margin-bottom:16px;text-align:left;}
+.dbtns{display:flex;gap:10px;justify-content:center;}
+.dbtn{font-family:var(--head);font-size:9px;letter-spacing:3px;padding:9px 24px;border:none;cursor:pointer;transition:all 0.2s;pointer-events:all;}
+.dbtn.ok{background:rgba(57,217,138,0.1);border:1px solid var(--green);color:var(--green);}
 .dbtn.ok:hover{background:var(--green);color:var(--bg);}
-.dbtn.no{background:rgba(232,64,58,0.12);border:1px solid var(--red);color:var(--red);}
+.dbtn.no{background:rgba(232,64,58,0.1);border:1px solid var(--red);color:var(--red);}
 .dbtn.no:hover{background:var(--red);color:var(--bg);}
-#qchat{position:fixed;bottom:34px;right:0;width:206px;background:rgba(8,8,15,0.95);border-top:1px solid rgba(244,168,37,0.28);border-left:1px solid rgba(244,168,37,0.18);z-index:200;pointer-events:all;transform:translateY(100%);transition:transform 0.3s ease;}
+
+/* QUEEN CHAT */
+#qchat{position:fixed;bottom:32px;right:0;width:200px;background:rgba(8,8,15,0.96);border-top:1px solid rgba(244,168,37,0.25);border-left:1px solid rgba(244,168,37,0.15);z-index:200;pointer-events:all;transform:translateY(100%);transition:transform 0.3s ease;}
 #qchat.open{transform:translateY(0);}
-.qch{padding:8px 12px;border-bottom:1px solid rgba(244,168,37,0.18);cursor:pointer;display:flex;justify-content:space-between;align-items:center;}
+.qch{padding:7px 10px;border-bottom:1px solid rgba(244,168,37,0.15);cursor:pointer;display:flex;justify-content:space-between;align-items:center;}
 .qct{font-family:var(--bar);font-size:9px;font-weight:700;letter-spacing:3px;color:var(--gold);text-transform:uppercase;}
-.qcm{height:200px;overflow-y:auto;padding:10px;display:flex;flex-direction:column;gap:6px;}
-.qmsg{font-size:11px;line-height:1.5;padding:6px 8px;max-width:96%;}
-.qmsg.u{background:rgba(244,168,37,0.08);border:1px solid rgba(244,168,37,0.2);color:var(--text);align-self:flex-end;font-family:var(--mono);}
+.qcm{height:180px;overflow-y:auto;padding:8px;display:flex;flex-direction:column;gap:5px;}
+.qmsg{font-size:10px;line-height:1.5;padding:5px 7px;max-width:96%;}
+.qmsg.u{background:rgba(244,168,37,0.08);border:1px solid rgba(244,168,37,0.18);color:var(--text);align-self:flex-end;font-family:var(--mono);}
 .qmsg.q{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);color:var(--text);align-self:flex-start;}
 .qmsg.th{color:var(--text-dim);font-size:10px;animation:pulse 1s step-end infinite;}
-.qci{display:flex;border-top:1px solid rgba(244,168,37,0.12);}
-.qcinput{flex:1;background:transparent;border:none;color:var(--text);font-family:var(--mono);font-size:11px;padding:8px 10px;outline:none;}
-.qcsend{background:transparent;border:none;border-left:1px solid rgba(244,168,37,0.18);color:var(--gold);font-family:var(--mono);font-size:13px;padding:8px 10px;cursor:pointer;}
+.qci{display:flex;border-top:1px solid rgba(244,168,37,0.1);}
+.qcinput{flex:1;background:transparent;border:none;color:var(--text);font-family:var(--mono);font-size:10px;padding:7px 8px;outline:none;}
+.qcsend{background:transparent;border:none;border-left:1px solid rgba(244,168,37,0.15);color:var(--gold);font-family:var(--mono);font-size:12px;padding:7px 9px;cursor:pointer;}
 .qcsend:hover{background:rgba(244,168,37,0.1);}
-#qtoggle{position:fixed;bottom:42px;right:206px;background:rgba(8,8,15,0.9);border:1px solid rgba(244,168,37,0.35);border-right:none;color:var(--gold);font-family:var(--mono);font-size:10px;letter-spacing:2px;padding:6px 10px;cursor:pointer;z-index:201;pointer-events:all;writing-mode:vertical-rl;text-orientation:mixed;transform:rotate(180deg);}
+#qtoggle{position:fixed;bottom:40px;right:200px;background:rgba(8,8,15,0.92);border:1px solid rgba(244,168,37,0.3);border-right:none;color:var(--gold);font-family:var(--mono);font-size:9px;letter-spacing:2px;padding:5px 8px;cursor:pointer;z-index:201;pointer-events:all;writing-mode:vertical-rl;text-orientation:mixed;transform:rotate(180deg);}
 #qtoggle:hover{background:rgba(244,168,37,0.1);}
 </style>
 </head>
@@ -109,8 +131,8 @@ canvas#world{position:fixed;inset:0;width:100%;height:100%;}
     <div id="live-clock">00:00:00</div>
     <div class="top-status">
       <span class="sdot"></span><span id="sys-status">CHANCELLOR ONLINE</span>
-      <span style="color:rgba(244,168,37,0.3)">|</span><span id="agent-count">5 ACTIVE</span>
-      <span style="color:rgba(244,168,37,0.3)">|</span><span id="rec-top">1.5% RECOVERED</span>
+      <span style="color:rgba(244,168,37,0.2)">|</span><span id="agent-count">5 ACTIVE</span>
+      <span style="color:rgba(244,168,37,0.2)">|</span><span id="rec-top">1.5% RECOVERED</span>
     </div>
   </div>
   <div id="left-panel">
@@ -131,22 +153,27 @@ canvas#world{position:fixed;inset:0;width:100%;height:100%;}
       <div class="reclbl"><span>Recovery</span><span id="rec-pct">0%</span></div>
       <div class="recbar"><div class="recfill" id="rec-fill" style="width:0%"></div></div>
     </div>
-    <div class="ptitle" style="margin-top:12px">⬡ Honey Split</div>
+    <div class="ptitle" style="margin-top:10px">⬡ Honey Split</div>
     <div id="honey-bars"></div>
   </div>
   <div id="market-panel">
     <div>
-      <div style="font-size:9px;color:var(--text-dim);letter-spacing:3px;text-transform:uppercase;margin-bottom:4px">Market Signal</div>
+      <div style="font-size:8px;color:var(--text-dim);letter-spacing:3px;text-transform:uppercase;margin-bottom:3px">Market Signal</div>
       <div class="mniche" id="market-niche">Scanning...</div>
-      <div style="display:flex;gap:8px;margin-top:6px">
+      <div style="display:flex;gap:6px;margin-top:5px">
         <div class="mtag" id="mdir">—</div><div class="mtag" id="mact">—</div><div class="mtag g" id="mmhr">—</div>
       </div>
     </div>
     <div style="text-align:center"><div class="vigor" id="vigor-num">—</div><div class="vigorlbl">Vigor / 10</div></div>
     <div style="text-align:center">
-      <div style="font-size:9px;color:var(--text-dim);letter-spacing:2px;text-transform:uppercase;margin-bottom:4px">Decree</div>
-      <div id="decree-badge" style="font-family:var(--bar);font-size:14px;font-weight:700;letter-spacing:3px;color:var(--green)">—</div>
+      <div style="font-size:8px;color:var(--text-dim);letter-spacing:2px;text-transform:uppercase;margin-bottom:3px">Decree</div>
+      <div id="decree-badge" style="font-family:var(--bar);font-size:13px;font-weight:700;letter-spacing:3px;color:var(--green)">—</div>
     </div>
+  </div>
+  <div id="zoom-ctrl">
+    <button class="zbtn" onclick="zoom(0.15)">+</button>
+    <button class="zbtn" onclick="zoom(-0.15)">−</button>
+    <button class="zbtn" style="font-size:10px;letter-spacing:1px" onclick="resetView()">⌂</button>
   </div>
   <div id="bottom-bar">
     <div class="tlbl">⬡ ACTIVITY</div>
@@ -154,6 +181,7 @@ canvas#world{position:fixed;inset:0;width:100%;height:100%;}
   </div>
   <div id="tooltip"><div class="ttname" id="tt-name"></div><div class="ttagents" id="tt-agents"></div></div>
 </div>
+
 <div id="decree-overlay">
   <div id="decree-panel">
     <span class="dcrown">👑</span>
@@ -171,6 +199,7 @@ canvas#world{position:fixed;inset:0;width:100%;height:100%;}
     </div>
   </div>
 </div>
+
 <button id="qtoggle" onclick="toggleQ()">⬡ QUEEN</button>
 <div id="qchat">
   <div class="qch" onclick="toggleQ()"><span class="qct">⬡ Queen — Direct</span><span style="font-size:10px;color:var(--text-dim)">▼</span></div>
@@ -190,284 +219,248 @@ let decreeShown=false;
 
 const canvas=document.getElementById('world');
 const ctx=canvas.getContext('2d');
-let W,H,CX,CY;
+let W,H;
 
-function resize(){
-  W=canvas.width=window.innerWidth;
-  H=canvas.height=window.innerHeight;
-  // Center slightly above vertical middle, between left panel (186px) and right panel (206px)
-  CX=W/2+10;
-  CY=H/2+30;
-}
+function resize(){W=canvas.width=window.innerWidth;H=canvas.height=window.innerHeight;}
 resize();
 window.addEventListener('resize',resize);
 
+// ── Pan / Zoom state ──
+let camX=0, camY=0, camScale=1;
+let isDragging=false, dragStartX=0, dragStartY=0, camStartX=0, camStartY=0;
+
+function zoom(delta){
+  camScale=Math.max(0.4,Math.min(2.5,camScale+delta));
+}
+function resetView(){camX=0;camY=0;camScale=1;}
+
+canvas.addEventListener('mousedown',e=>{
+  isDragging=true;dragStartX=e.clientX;dragStartY=e.clientY;
+  camStartX=camX;camStartY=camY;canvas.classList.add('dragging');
+});
+window.addEventListener('mousemove',e=>{
+  if(isDragging){camX=camStartX+(e.clientX-dragStartX);camY=camStartY+(e.clientY-dragStartY);}
+  handleHover(e.clientX,e.clientY);
+});
+window.addEventListener('mouseup',()=>{isDragging=false;canvas.classList.remove('dragging');});
+canvas.addEventListener('wheel',e=>{
+  e.preventDefault();zoom(e.deltaY<0?0.1:-0.1);
+},{passive:false});
+
+// Touch pan
+let lastTouchDist=0;
+canvas.addEventListener('touchstart',e=>{
+  if(e.touches.length===1){isDragging=true;dragStartX=e.touches[0].clientX;dragStartY=e.touches[0].clientY;camStartX=camX;camStartY=camY;}
+  if(e.touches.length===2){lastTouchDist=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);}
+},{passive:true});
+canvas.addEventListener('touchmove',e=>{
+  if(e.touches.length===1&&isDragging){camX=camStartX+(e.touches[0].clientX-dragStartX);camY=camStartY+(e.touches[0].clientY-dragStartY);}
+  if(e.touches.length===2){const d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);zoom((d-lastTouchDist)*0.005);lastTouchDist=d;}
+},{passive:true});
+canvas.addEventListener('touchend',()=>{isDragging=false;});
+
 // ── Image loader ──
 const IMGS={};
-function loadImg(key,src){
-  return new Promise(res=>{
-    const img=new Image();
-    img.onload=()=>{IMGS[key]=img;res();};
-    img.onerror=()=>{console.warn('Failed:',src);res();};
-    img.src=src;
-  });
+function loadImg(key,src){return new Promise(res=>{const img=new Image();img.onload=()=>{IMGS[key]=img;res();};img.onerror=()=>{res();};img.src=src;});}
+
+// ── Room size and hex grid math ──
+// The room images have black padding around the hex. The visible hex is ~72% of image.
+// For rooms to appear touching, step = visible_hex_width ≈ SIZE * 0.72
+// hex grid: pointy-top offset layout
+// col spacing: SIZE * 0.72 (adjacent rooms)
+// row spacing: SIZE * 0.62 (vertical, accounting for hex shape)
+
+const SIZE=340;
+const STEP_X=SIZE*0.725;
+const STEP_Y=SIZE*0.62;
+
+// 7-island diamond layout (col, row in hex offset grid)
+// Center = queen at (0,0)
+const GRID_POS={
+  queen:   {col:0,  row:0 },
+  research:{col:-1, row:1 },
+  wealth:  {col:1,  row:1 },
+  vault:   {col:0,  row:2 },
+  workshop:{col:-1, row:3 },
+  security:{col:1,  row:3 },
+  apiary:  {col:0,  row:4 },
+};
+
+// Convert hex grid to world pixel offset
+function hexToWorld(col,row){
+  return {
+    x: col * STEP_X,
+    y: row * STEP_Y
+  };
 }
 
-// ── Honeycomb grid layout ──
-// Room images are ~square but the visible hex content is:
-// width ≈ 0.87 * image_size, height ≈ 0.75 * image_size
-// For seamless hex tiling:
-//   col offset: image_size * 0.75 (3/4 width)
-//   row offset: image_size * 0.433 (half hex height ≈ sqrt(3)/4 * size)
-// With size=290, available viewport = 1288-186-206=896px wide, 1192-48-34=1110px tall
-
-const SIZE=290; // room image render size
-const HX=SIZE*0.74;  // horizontal step between adjacent hex columns
-const HY=SIZE*0.44;  // vertical step between rows
-
-// 7-island diamond: row by row
-// Row 0 (top):    queen         (col 0)
-// Row 1:          research, wealth  (col -1, +1)
-// Row 2 (mid):    vault         (col 0)
-// Row 3:          workshop, security (col -1, +1)
-// Row 4 (bot):    apiary        (col 0)
-
-const GRID=[
-  // id, gridCol, gridRow
-  ['queen',    0, 0],
-  ['research',-1, 1],
-  ['wealth',   1, 1],
-  ['vault',    0, 2],
-  ['workshop',-1, 3],
-  ['security', 1, 3],
-  ['apiary',   0, 4],
-];
-
-// Convert grid coords to screen offsets from center
-// Diamond pattern: even rows centered, odd rows offset
-function gridToOffset(col, row){
-  const x = col * HX;
-  const y = row * HY * 2; // *2 because each row is one hex height apart
-  return {x, y};
-}
-
-// Bee positions relative to room center (front-center of each room)
-// Rooms are isometric so the "floor" is in the bottom 40% of the image
-const BEE_IN_ROOM = {x: 0, y: 30}; // slightly below center = front floor area
+// Bee placement: inside front-floor area of each room
+// The isometric floor occupies roughly bottom-center of the hex
+// y offset: ~+SIZE*0.08 puts bee on visible floor
+const BEE_OFF={x:0, y:SIZE*0.06};
 
 const ISLANDS=[
-  {id:'queen',    label:"Queen's Court",   room:'room-queen',    bee:'bee-queen',   beeScale:0.085,
-   accent:'#F4A825',agents:['queen'],          desc:"Strategic HQ\nRoyal Decrees",      bob:0},
-  {id:'research', label:'Research Station',room:'room-research',  bee:'bee-scout',   beeScale:0.075,
-   accent:'#39d98a',agents:['scout','bard'],   desc:"Market research\nScout dances",    bob:1.1},
-  {id:'wealth',   label:'Wealth Garden',   room:'room-wealth',    bee:null,          beeScale:0.075,
-   accent:'#9b59b6',agents:['forager','treasurer'],desc:"Revenue\nTreasurer verdicts",  bob:0.6},
-  {id:'vault',    label:'The Vault',        room:'room-vault',     bee:null,          beeScale:0.075,
-   accent:'#cd853f',agents:['chancellor'],     desc:"Financial records\nHoney split",   bob:1.7},
-  {id:'workshop', label:'The Workshop',     room:'room-workshop',  bee:'bee-foreman', beeScale:0.075,
-   accent:'#4a9eff',agents:['foreman','engineer'],desc:"A1 Mini printing\nProduction",  bob:2.4},
-  {id:'security', label:'Security',         room:'room-security',  bee:null,          beeScale:0.075,
-   accent:'#4a6eff',agents:['supervisor','warden'],desc:"Code audit\nMonitoring",       bob:3.0},
-  {id:'apiary',   label:'The Apiary',       room:'room-apiary',    bee:null,          beeScale:0.075,
-   accent:'#F4A825',agents:['nurse','quartermaster'],desc:"Storage mgmt\nBriefings",   bob:1.9},
+  {id:'queen',    label:"Queen's Court",   room:'room-queen',    bee:'bee-queen',   beeScale:0.09,  accent:'#F4A825',agents:['queen'],               desc:"Strategic HQ\nRoyal Decrees",       bob:0.0},
+  {id:'research', label:'Research Station',room:'room-research',  bee:'bee-scout',   beeScale:0.08,  accent:'#39d98a',agents:['scout','bard'],         desc:"Market research\nScout dances",     bob:1.1},
+  {id:'wealth',   label:'Wealth Garden',   room:'room-wealth',    bee:null,          beeScale:0.08,  accent:'#9b59b6',agents:['forager','treasurer'],   desc:"Revenue\nTreasurer verdicts",       bob:0.6},
+  {id:'vault',    label:'The Vault',        room:'room-vault',     bee:null,          beeScale:0.08,  accent:'#cd853f',agents:['chancellor'],           desc:"Financial records\nHoney split",    bob:1.7},
+  {id:'workshop', label:'The Workshop',     room:'room-workshop',  bee:'bee-foreman', beeScale:0.08,  accent:'#4a9eff',agents:['foreman','engineer'],   desc:"A1 Mini printing\nProduction",      bob:2.4},
+  {id:'security', label:'Security',         room:'room-security',  bee:null,          beeScale:0.08,  accent:'#4a6eff',agents:['supervisor','warden'],  desc:"Code audit\nMonitoring",            bob:3.0},
+  {id:'apiary',   label:'The Apiary',       room:'room-apiary',    bee:null,          beeScale:0.08,  accent:'#F4A825',agents:['nurse','quartermaster'],desc:"Storage mgmt\nBriefings",          bob:1.9},
 ];
 
-// Attach grid positions to islands
-GRID.forEach(([id,col,row])=>{
-  const isl=ISLANDS.find(i=>i.id===id);
-  if(isl){const o=gridToOffset(col,row);isl.ox=o.x;isl.oy=o.y;}
+// Attach world positions
+ISLANDS.forEach(isl=>{
+  const g=GRID_POS[isl.id];
+  const w=hexToWorld(g.col,g.row);
+  isl.wx=w.x; isl.wy=w.y;
 });
 
-let t=0,hovId=null;
-
-// Stars
-const STARS=Array.from({length:200},()=>({
-  x:Math.random()*3000,y:Math.random()*2000,r:Math.random()*1.3,a:Math.random()*0.4+0.05
-}));
-
-// Honey motes
-let motes=[];
-function initMotes(){
-  motes=Array.from({length:35},()=>{
-    const isl=ISLANDS[Math.floor(Math.random()*ISLANDS.length)];
-    return{x:CX+isl.ox+(Math.random()-.5)*140,y:CY+isl.oy+(Math.random()-.5)*80,
-      vy:-(0.28+Math.random()*.45),vx:(Math.random()-.5)*.3,a:0.35+Math.random()*.5,r:1+Math.random()*.8,isl};
-  });
+// Center offset so queen is centered when camX=camY=0
+const queenCenter={x:0,y:0};
+// World-to-screen: screen = (world + cam) * scale + screenCenter
+function worldToScreen(wx,wy){
+  const cx=W/2+camX, cy=H/2+camY-30; // -30 shifts world up slightly
+  return{
+    x: cx + wx*camScale,
+    y: cy + wy*camScale
+  };
 }
 
-// Smoke
-let smoke=[];
-function initSmoke(){
+let t=0, hovId=null;
+
+// Stars (world space so they don't move with cam)
+const STARS=Array.from({length:200},()=>({x:(Math.random()-.5)*4000,y:(Math.random()-.5)*3000,r:Math.random()*1.3,a:Math.random()*0.4+0.05}));
+
+// Particles in world space
+let motes=[], smoke=[];
+function initParticles(){
+  motes=Array.from({length:40},()=>{
+    const isl=ISLANDS[Math.floor(Math.random()*ISLANDS.length)];
+    return{wx:isl.wx+(Math.random()-.5)*SIZE*0.4,wy:isl.wy+(Math.random()-.5)*SIZE*0.25,
+      vy:-(0.25+Math.random()*.4),vx:(Math.random()-.5)*.25,a:0.35+Math.random()*.5,r:1+Math.random()*.8,isl};
+  });
   const ws=ISLANDS.find(i=>i.id==='workshop');
   smoke=Array.from({length:7},()=>({
-    x:CX+ws.ox+(Math.random()-.5)*35,y:CY+ws.oy-SIZE*0.3,
-    vy:-(0.35+Math.random()*.28),vx:(Math.random()-.5)*.3,
-    a:0.09+Math.random()*.07,r:7+Math.random()*6,ox:Math.random()*Math.PI*2
+    wx:ws.wx+(Math.random()-.5)*SIZE*0.12,wy:ws.wy-SIZE*0.28,
+    vy:-(0.3+Math.random()*.22),vx:(Math.random()-.5)*.2,
+    a:0.08+Math.random()*.07,r:7+Math.random()*6,ox:Math.random()*Math.PI*2
   }));
-}
-
-// Hex clip path for a room at (cx,cy) with given size
-// The hex is oriented flat-top: points at left/right, edges top-left/right, bottom-left/right
-function hexClip(cx,cy,s){
-  const w=s*0.5, h=s*0.43; // half-width and half-height of hex content
-  ctx.beginPath();
-  ctx.moveTo(cx,      cy-h*2);   // top
-  ctx.lineTo(cx+w*1.5,cy-h);     // top-right
-  ctx.lineTo(cx+w*1.5,cy+h);     // bottom-right
-  ctx.lineTo(cx,      cy+h*2);   // bottom
-  ctx.lineTo(cx-w*1.5,cy+h);     // bottom-left
-  ctx.lineTo(cx-w*1.5,cy-h);     // top-left
-  ctx.closePath();
 }
 
 function drawRoom(isl,bob){
   const img=IMGS[isl.room];
-  const rx=CX+isl.ox, ry=CY+isl.oy+bob;
-  const s=SIZE;
+  const s=worldToScreen(isl.wx,isl.wy+bob);
+  const sz=SIZE*camScale;
+  const rx=s.x, ry=s.y;
 
   if(img){
     ctx.save();
-    // Soft glow behind room
+    // Glow on hover
     if(hovId===isl.id){
       const R=parseInt(isl.accent.slice(1,3),16);
       const G=parseInt(isl.accent.slice(3,5),16);
       const B=parseInt(isl.accent.slice(5,7),16);
-      const gr=ctx.createRadialGradient(rx,ry,20,rx,ry,s*0.65);
-      gr.addColorStop(0,`rgba(${R},${G},${B},0.25)`);
+      const gr=ctx.createRadialGradient(rx,ry,10,rx,ry,sz*0.5);
+      gr.addColorStop(0,`rgba(${R},${G},${B},0.22)`);
       gr.addColorStop(1,'rgba(0,0,0,0)');
-      ctx.fillStyle=gr;
-      ctx.beginPath();ctx.arc(rx,ry,s*0.65,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle=gr;ctx.beginPath();ctx.arc(rx,ry,sz*0.5,0,Math.PI*2);ctx.fill();
     }
-
-    // Draw room image — no clip so the hex outline shows naturally
-    ctx.drawImage(img, rx-s/2, ry-s/2, s, s);
-
-    // Hover accent border — trace hex shape
-    if(hovId===isl.id){
-      hexClip(rx,ry,s*0.88);
-      ctx.strokeStyle=isl.accent;
-      ctx.lineWidth=2;
-      ctx.globalAlpha=0.5;
-      ctx.stroke();
-      ctx.globalAlpha=1;
-    }
-    ctx.restore();
-  } else {
-    // Placeholder
-    ctx.save();
-    ctx.fillStyle='rgba(244,168,37,0.05)';
-    ctx.beginPath();ctx.arc(rx,ry,s/2,0,Math.PI*2);ctx.fill();
+    ctx.drawImage(img,rx-sz/2,ry-sz/2,sz,sz);
     ctx.restore();
   }
 
-  // Label — below the room
+  // Label
   ctx.save();
-  ctx.font="600 11px 'Barlow Condensed',sans-serif";
+  const fontSize=Math.max(9,11*camScale);
+  ctx.font=`600 ${fontSize}px 'Barlow Condensed',sans-serif`;
   ctx.textAlign='center';
   ctx.fillStyle=isl.accent;
-  ctx.globalAlpha=0.8;
-  ctx.fillText(isl.label, rx, ry+s/2+14);
+  ctx.globalAlpha=0.85;
+  ctx.fillText(isl.label,rx,ry+sz*0.52+fontSize+2);
   ctx.restore();
 
-  // Store for hit testing
-  isl._sx=rx; isl._sy=ry; isl._sr=s/2;
+  // Store screen pos for hit testing
+  isl._sx=rx;isl._sy=ry;isl._sr=sz*0.38;
 }
 
 function drawBee(isl,bob){
   if(!isl.bee||!IMGS[isl.bee])return;
   const img=IMGS[isl.bee];
-  const sc=isl.beeScale;
-  const iw=img.width*sc, ih=img.height*sc;
-  const rx=CX+isl.ox, ry=CY+isl.oy+bob;
-  // Place bee at front-floor of room (lower-center of hex)
-  const bx=rx+BEE_IN_ROOM.x;
-  const by=ry+BEE_IN_ROOM.y;
-  // Bee hover bob — slightly faster and offset
-  const beeBob=Math.sin(t*1.3+isl.bob)*3;
-  ctx.drawImage(img, bx-iw/2, by+beeBob-ih*0.7, iw, ih);
+  const sc=isl.beeScale*camScale;
+  const iw=img.width*sc,ih=img.height*sc;
+  const s=worldToScreen(isl.wx+BEE_OFF.x,isl.wy+BEE_OFF.y+bob);
+  const beeBob=Math.sin(t*1.3+isl.bob)*3*camScale;
+  ctx.drawImage(img,s.x-iw/2,s.y+beeBob-ih*0.85,iw,ih);
 }
 
 function drawConnections(){
   const q=ISLANDS[0];
-  const qx=CX+q.ox, qy=CY+q.oy+Math.sin(t*0.5)*5;
+  const qs=worldToScreen(q.wx,q.wy+Math.sin(t*0.5)*4);
   ctx.save();
+  ctx.setLineDash([4,10]);
+  ctx.strokeStyle='rgba(244,168,37,0.12)';ctx.lineWidth=1;
   ISLANDS.slice(1).forEach(isl=>{
-    const ix=CX+isl.ox, iy=CY+isl.oy+Math.sin(t*0.5+isl.bob)*5;
-    ctx.beginPath();ctx.moveTo(qx,qy);ctx.lineTo(ix,iy);
-    ctx.strokeStyle='rgba(244,168,37,0.1)';ctx.lineWidth=1;
-    ctx.setLineDash([4,12]);ctx.stroke();ctx.setLineDash([]);
+    const is=worldToScreen(isl.wx,isl.wy+Math.sin(t*0.5+isl.bob)*4);
+    ctx.beginPath();ctx.moveTo(qs.x,qs.y);ctx.lineTo(is.x,is.y);ctx.stroke();
   });
-  ctx.restore();
+  ctx.setLineDash([]);ctx.restore();
 }
 
 function render(){
   ctx.clearRect(0,0,W,H);
   ctx.fillStyle='#08080f';ctx.fillRect(0,0,W,H);
 
+  // Stars in screen space (fixed, no pan)
   STARS.forEach(s=>{
-    ctx.beginPath();ctx.arc(s.x%W,s.y%H,s.r,0,Math.PI*2);
+    const sx=(s.x+W/2)%W,sy=(s.y+H/2)%H;
+    ctx.beginPath();ctx.arc(sx,sy,s.r,0,Math.PI*2);
     ctx.fillStyle=`rgba(255,255,255,${s.a})`;ctx.fill();
   });
 
-  const nb=ctx.createRadialGradient(CX,CY,40,CX,CY,Math.max(W,H)*0.55);
-  nb.addColorStop(0,'rgba(244,168,37,0.02)');nb.addColorStop(1,'rgba(0,0,0,0)');
+  // Nebula
+  const nb=ctx.createRadialGradient(W/2,H/2,40,W/2,H/2,Math.max(W,H)*0.55);
+  nb.addColorStop(0,'rgba(244,168,37,0.018)');nb.addColorStop(1,'rgba(0,0,0,0)');
   ctx.fillStyle=nb;ctx.fillRect(0,0,W,H);
 
   drawConnections();
 
-  // Sort rooms top-to-bottom (oy ascending) so lower rooms draw on top
-  const sorted=[...ISLANDS].sort((a,b)=>a.oy-b.oy);
+  const sorted=[...ISLANDS].sort((a,b)=>a.wy-b.wy);
+  sorted.forEach(isl=>{const bob=Math.sin(t*0.42+isl.bob)*4;drawRoom(isl,bob);});
+  sorted.forEach(isl=>{const bob=Math.sin(t*0.42+isl.bob)*4;drawBee(isl,bob);});
 
-  sorted.forEach(isl=>{
-    const bob=Math.sin(t*0.42+isl.bob)*5;
-    drawRoom(isl,bob);
-  });
-
-  // Bees on top of all rooms
-  sorted.forEach(isl=>{
-    const bob=Math.sin(t*0.42+isl.bob)*5;
-    drawBee(isl,bob);
-  });
-
-  // Honey motes
+  // Motes
   motes.forEach(p=>{
-    p.y+=p.vy;p.x+=p.vx;p.a-=0.0018;
-    if(p.a<=0||p.y<40){
-      const isl=p.isl;
-      p.x=CX+isl.ox+(Math.random()-.5)*140;
-      p.y=CY+isl.oy+30;p.a=0.3+Math.random()*.45;
-    }
-    ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+    p.wy+=p.vy;p.wx+=p.vx;p.a-=0.0016;
+    if(p.a<=0){const isl=p.isl;p.wx=isl.wx+(Math.random()-.5)*SIZE*0.4;p.wy=isl.wy;p.a=0.3+Math.random()*.45;}
+    const s=worldToScreen(p.wx,p.wy);
+    ctx.beginPath();ctx.arc(s.x,s.y,p.r*camScale,0,Math.PI*2);
     ctx.fillStyle=`rgba(244,168,37,${p.a})`;ctx.fill();
   });
 
-  // Smoke from workshop
+  // Smoke
   const ws=ISLANDS.find(i=>i.id==='workshop');
   smoke.forEach(s=>{
-    s.y+=s.vy;s.x+=Math.sin(t*.85+s.ox)*.22+s.vx;s.a-=0.001;
-    if(s.a<=0){
-      s.x=CX+ws.ox+(Math.random()-.5)*35;
-      s.y=CY+ws.oy-SIZE*0.3;s.a=0.08;
-    }
-    ctx.beginPath();ctx.arc(s.x,s.y,s.r,0,Math.PI*2);
-    ctx.fillStyle=`rgba(155,155,155,${s.a})`;ctx.fill();
+    s.wy+=s.vy;s.wx+=Math.sin(t*.85+s.ox)*.18+s.vx;s.a-=0.001;
+    if(s.a<=0){s.wx=ws.wx+(Math.random()-.5)*SIZE*0.12;s.wy=ws.wy-SIZE*0.28;s.a=0.08;}
+    const sp=worldToScreen(s.wx,s.wy);
+    ctx.beginPath();ctx.arc(sp.x,sp.y,s.r*camScale,0,Math.PI*2);
+    ctx.fillStyle=`rgba(150,150,150,${s.a})`;ctx.fill();
   });
 
   t+=0.016;
   requestAnimationFrame(render);
 }
 
-// Hit testing
-canvas.addEventListener('mousemove',e=>{
-  const mx=e.clientX,my=e.clientY;
+function handleHover(mx,my){
   hovId=null;
   ISLANDS.forEach(isl=>{
     if(!isl._sx)return;
     const dx=mx-isl._sx,dy=my-isl._sy;
-    if(Math.sqrt(dx*dx+dy*dy)<isl._sr*0.7) hovId=isl.id;
+    if(Math.sqrt(dx*dx+dy*dy)<isl._sr) hovId=isl.id;
   });
   const tt=document.getElementById('tooltip');
-  if(hovId){
+  if(hovId&&!isDragging){
     const isl=ISLANDS.find(i=>i.id===hovId);
     document.getElementById('tt-name').textContent=isl.label;
     document.getElementById('tt-agents').textContent=isl.agents.join(', ')+'\n'+isl.desc;
@@ -475,40 +468,10 @@ canvas.addEventListener('mousemove',e=>{
   } else {
     tt.style.display='none';
   }
-});
+}
+
 canvas.addEventListener('mouseleave',()=>{hovId=null;document.getElementById('tooltip').style.display='none';});
 
-// Scout fly-off animation
-let scoutFlying=false;
-setInterval(()=>{
-  if(scoutFlying)return;
-  scoutFlying=true;
-  const isl=ISLANDS.find(i=>i.id==='research');
-  const origOff={...BEE_IN_ROOM};
-  let elapsed=0;
-  isl._beeOff={...BEE_IN_ROOM};
-  const fly=setInterval(()=>{
-    elapsed+=50;
-    if(elapsed<2500){
-      const p=elapsed/2500;
-      isl._beeOff={x:origOff.x-p*W*0.6,y:origOff.y-p*80};
-    } else if(elapsed<4000){
-      isl._beeOff={x:W,y:origOff.y+60};
-    } else if(elapsed<6500){
-      const p=(elapsed-4000)/2500;
-      isl._beeOff={x:W*(1-p)*0.6+origOff.x*p,y:origOff.y+60-p*60};
-    } else {
-      isl._beeOff=null;
-      scoutFlying=false;
-      clearInterval(fly);
-    }
-  },50);
-},15000);
-
-// Override drawBee to support scout offset
-const _origDrawBee=drawBee;
-
-// Load assets then start
 async function init(){
   const loads=[];
   ISLANDS.forEach(isl=>{
@@ -516,8 +479,7 @@ async function init(){
     if(isl.bee) loads.push(loadImg(isl.bee,ASSETS+'/'+isl.bee+'.png'));
   });
   await Promise.all(loads);
-  initMotes();
-  initSmoke();
+  initParticles();
   render();
 }
 init();
@@ -582,8 +544,7 @@ function showDecree(d){
   document.getElementById('d-spend').textContent=fmt(dec.spend);
   document.getElementById('d-model').textContent=dec.model_rec||'—';
   document.getElementById('d-reason').textContent=dec.reasoning||'—';
-  document.getElementById('decree-overlay').classList.add('active');
-  decreeShown=true;
+  document.getElementById('decree-overlay').classList.add('active');decreeShown=true;
 }
 function closeDecree(){document.getElementById('decree-overlay').classList.remove('active');}
 
@@ -594,15 +555,9 @@ setInterval(()=>{
 },1000);
 
 async function fetchData(){
-  try{
-    const r=await fetch(API+'/hive-status',{cache:'no-store'});
-    applyData(await r.json());
-    document.getElementById('sys-status').textContent='CHANCELLOR ONLINE';
-    document.getElementById('sys-status').style.color='';
-  }catch(e){
-    document.getElementById('sys-status').textContent='CHANCELLOR OFFLINE';
-    document.getElementById('sys-status').style.color='var(--red)';
-  }
+  try{const r=await fetch(API+'/hive-status',{cache:'no-store'});applyData(await r.json());
+    document.getElementById('sys-status').textContent='CHANCELLOR ONLINE';document.getElementById('sys-status').style.color='';}
+  catch(e){document.getElementById('sys-status').textContent='CHANCELLOR OFFLINE';document.getElementById('sys-status').style.color='var(--red)';}
 }
 fetchData();setInterval(fetchData,REFRESH);
 
@@ -618,10 +573,7 @@ async function sendQ(){
     const data=await r.json();document.getElementById('qt')?.remove();
     msgs.innerHTML+=`<div class="qmsg q">${(data.reply||data.error||'No response').replace(/\n/g,'<br>').replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')}</div>`;
     msgs.scrollTop=msgs.scrollHeight;
-  }catch(e){
-    document.getElementById('qt')?.remove();
-    msgs.innerHTML+=`<div class="qmsg q" style="color:var(--red)">Error: ${e.message}</div>`;
-  }
+  }catch(e){document.getElementById('qt')?.remove();msgs.innerHTML+=`<div class="qmsg q" style="color:var(--red)">Error: ${e.message}</div>`;}
 }
 </script>
 </body>
