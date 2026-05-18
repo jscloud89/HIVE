@@ -6,13 +6,13 @@
 <title>THE HIVE — Command World</title>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700;900&family=Share+Tech+Mono&family=VT323&family=Barlow+Condensed:wght@300;400;600;700&display=swap" rel="stylesheet">
 <style>
-* { margin:0; padding:0; box-sizing:border-box; }
-:root {
-  --gold:#F4A825; --gold-dim:#a86e10; --gold-bright:#ffd060;
-  --bg:#08080f; --text:#c8d0dc; --text-dim:#4a5568;
-  --green:#39d98a; --red:#e8403a; --blue:#4a9eff;
-  --mono:'Share Tech Mono',monospace; --head:'Cinzel Decorative',serif;
-  --vt:'VT323',monospace; --bar:'Barlow Condensed',sans-serif;
+*{margin:0;padding:0;box-sizing:border-box;}
+:root{
+  --gold:#F4A825;--gold-dim:#a86e10;--gold-bright:#ffd060;
+  --bg:#08080f;--text:#c8d0dc;--text-dim:#4a5568;
+  --green:#39d98a;--red:#e8403a;--blue:#4a9eff;
+  --mono:'Share Tech Mono',monospace;--head:'Cinzel Decorative',serif;
+  --vt:'VT323',monospace;--bar:'Barlow Condensed',sans-serif;
 }
 html,body{width:100%;height:100%;background:var(--bg);overflow:hidden;}
 body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.04) 2px,rgba(0,0,0,0.04) 4px);pointer-events:none;z-index:1000;}
@@ -66,7 +66,7 @@ canvas#world{position:fixed;inset:0;width:100%;height:100%;}
 .vigorlbl{font-size:9px;color:var(--text-dim);letter-spacing:2px;text-align:center;text-transform:uppercase;}
 .mtag{font-size:9px;letter-spacing:2px;padding:3px 8px;border:1px solid rgba(244,168,37,0.35);color:var(--gold);text-transform:uppercase;}
 .mtag.g{border-color:rgba(57,217,138,0.4);color:var(--green);}
-#tooltip{position:fixed;display:none;background:rgba(8,8,15,0.96);border:1px solid rgba(244,168,37,0.4);padding:10px 14px;pointer-events:none;z-index:300;}
+#tooltip{position:fixed;display:none;background:rgba(8,8,15,0.96);border:1px solid rgba(244,168,37,0.4);padding:10px 14px;pointer-events:none;z-index:300;max-width:200px;}
 .ttname{font-family:var(--bar);font-size:12px;font-weight:700;letter-spacing:2px;color:var(--gold);margin-bottom:5px;}
 .ttagents{font-size:10px;color:var(--text-dim);line-height:1.7;white-space:pre-line;}
 #decree-overlay{position:fixed;inset:0;background:rgba(0,0,0,0);z-index:500;display:flex;align-items:flex-start;justify-content:center;padding-top:56px;pointer-events:none;transition:background 0.5s;}
@@ -180,9 +180,11 @@ canvas#world{position:fixed;inset:0;width:100%;height:100%;}
     <button class="qcsend" onclick="sendQ()">→</button>
   </div>
 </div>
+
 <script>
 const API='http://192.168.50.10:8001';
 const ASSETS='http://192.168.50.10:8080/assets';
+const ROOMS=ASSETS+'/rooms';
 const REFRESH=30000;
 let decreeShown=false;
 
@@ -191,196 +193,158 @@ const ctx=canvas.getContext('2d');
 let W,H,cx,cy;
 function resize(){W=canvas.width=window.innerWidth;H=canvas.height=window.innerHeight;cx=W/2;cy=H/2;}
 resize();
-window.addEventListener('resize',resize);
+window.addEventListener('resize',()=>{resize();});
 
-// Load images
+// ── Image loader ──
 const IMGS={};
-const IMAP={'bee-queen':'bee-queen','bee-scout':'bee-scout','bee-foreman':'bee-foreman',
-  'printer':'printer-a1mini','vault':'vault-door','coins':'coin-stack',
-  'filament':'filament-spool','desk':'desk-computer'};
-Object.entries(IMAP).forEach(([k,v])=>{
-  const img=new Image();
-  img.onload=()=>{IMGS[k]=img;};
-  img.src=ASSETS+'/'+v+'.png';
-});
+function loadImg(key,src){
+  return new Promise(res=>{
+    const img=new Image();
+    img.onload=()=>{IMGS[key]=img;res();};
+    img.onerror=()=>{res();};
+    img.src=src;
+  });
+}
 
-// Island definitions using tile-grid isometric
+// ── Island definitions ──
+// x,y = screen offset from center (in pixels, before bob)
+// size = render width of the room image
 const ISLANDS=[
-  {id:'queen',label:"Queen's Court",agents:['queen'],desc:"Strategic HQ\nRoyal Decrees",
-   ix:0,iy:-5,w:4,d:4,h:4,
-   floor:'#b8900a',fDark:'#7a5e05',wall:'#5a3c05',wDark:'#2e1e02',wMid:'#7a5205',
-   sprite:'bee-queen',sScale:0.10,sOff:{x:-20,y:-105},
-   prop:null,accent:'#F4A825',bob:0},
-  {id:'research',label:'Research Station',agents:['scout','bard'],desc:"Market research\nScout waggle dances",
-   ix:-7,iy:-2,w:4,d:4,h:3,
-   floor:'#286040',fDark:'#184028',wall:'#123020',wDark:'#081810',wMid:'#1e4830',
-   sprite:'bee-scout',sScale:0.09,sOff:{x:-20,y:-85},
-   prop:'desk',pScale:0.14,pOff:{x:25,y:-65},accent:'#39d98a',bob:1.2},
-  {id:'wealth',label:'Wealth Garden',agents:['forager','treasurer'],desc:"Revenue tracking\nTreasurer verdicts",
-   ix:5,iy:-2,w:4,d:4,h:3,
-   floor:'#4a2878',fDark:'#2a1648',wall:'#1e0e3a',wDark:'#100820',wMid:'#341860',
-   sprite:null,sScale:0.09,sOff:{x:0,y:0},
-   prop:'coins',pScale:0.15,pOff:{x:15,y:-65},accent:'#9b59b6',bob:0.7},
-  {id:'vault',label:'The Vault',agents:['chancellor'],desc:"Financial records\nHoney split",
-   ix:0,iy:1,w:4,d:4,h:3,
-   floor:'#6a4818',fDark:'#4a300e',wall:'#3a2008',wDark:'#201008',wMid:'#5a3810',
-   sprite:null,sScale:0.09,sOff:{x:0,y:0},
-   prop:'vault',pScale:0.15,pOff:{x:15,y:-70},accent:'#cd853f',bob:1.8},
-  {id:'workshop',label:'The Workshop',agents:['foreman','engineer'],desc:"A1 Mini printing\nActive production",
-   ix:-7,iy:4,w:4,d:4,h:3,
-   floor:'#1a2838',fDark:'#101820',wall:'#0c1018',wDark:'#060810',wMid:'#182030',
-   sprite:'bee-foreman',sScale:0.09,sOff:{x:-22,y:-85},
-   prop:'printer',pScale:0.14,pOff:{x:22,y:-68},accent:'#4a9eff',bob:2.5},
-  {id:'security',label:'Security',agents:['supervisor','warden'],desc:"Code audit\nSecurity monitoring",
-   ix:5,iy:4,w:4,d:4,h:3,
-   floor:'#0f1828',fDark:'#080e18',wall:'#080c14',wDark:'#04060a',wMid:'#0e1420',
-   sprite:null,sScale:0.09,sOff:{x:0,y:0},
-   prop:'filament',pScale:0.14,pOff:{x:18,y:-65},accent:'#4a6eff',bob:3.1},
-  {id:'apiary',label:'The Apiary',agents:['nurse','quartermaster'],desc:"Storage mgmt\nMorning briefings",
-   ix:0,iy:7,w:4,d:4,h:2,
-   floor:'#5a3a10',fDark:'#3a2208',wall:'#281808',wDark:'#140c04',wMid:'#4a2e0a',
-   sprite:null,sScale:0.09,sOff:{x:0,y:0},
-   prop:'desk',pScale:0.13,pOff:{x:18,y:-58},accent:'#F4A825',bob:2.0},
+  {id:'queen',    label:"Queen's Court",   room:'room-queen',    bee:'bee-queen',    beeScale:0.10,
+   ox:0,   oy:-260, size:320, beeOff:{x:-30,y:-160},
+   accent:'#F4A825', agents:['queen'],           desc:"Strategic HQ\nRoyal Decrees issued here", bob:0},
+
+  {id:'research', label:'Research Station',room:'room-research',  bee:'bee-scout',    beeScale:0.09,
+   ox:-340,oy:-100, size:280, beeOff:{x:-30,y:-140},
+   accent:'#39d98a', agents:['scout','bard'],     desc:"Market research\nScout waggle dances",    bob:1.2},
+
+  {id:'wealth',   label:'Wealth Garden',   room:'room-wealth',    bee:null,           beeScale:0.09,
+   ox:340, oy:-100, size:280, beeOff:{x:0,y:0},
+   accent:'#9b59b6', agents:['forager','treasurer'],desc:"Revenue tracking\nTreasurer verdicts",  bob:0.7},
+
+  {id:'vault',    label:'The Vault',        room:'room-vault',     bee:null,           beeScale:0.09,
+   ox:0,   oy:40,   size:300, beeOff:{x:0,y:0},
+   accent:'#cd853f', agents:['chancellor'],       desc:"Financial records\nHoney split ledger",   bob:1.8},
+
+  {id:'workshop', label:'The Workshop',     room:'room-workshop',  bee:'bee-foreman',  beeScale:0.09,
+   ox:-320,oy:180,  size:280, beeOff:{x:-25,y:-140},
+   accent:'#4a9eff', agents:['foreman','engineer'],desc:"A1 Mini printing\nActive production",    bob:2.5},
+
+  {id:'security', label:'Security',         room:'room-security',  bee:null,           beeScale:0.09,
+   ox:320, oy:180,  size:280, beeOff:{x:0,y:0},
+   accent:'#4a6eff', agents:['supervisor','warden'],desc:"Code audit\nSecurity monitoring",       bob:3.1},
+
+  {id:'apiary',   label:'The Apiary',       room:'room-apiary',    bee:null,           beeScale:0.09,
+   ox:0,   oy:320,  size:280, beeOff:{x:0,y:0},
+   accent:'#F4A825', agents:['nurse','quartermaster'],desc:"Storage mgmt\nMorning briefings",     bob:2.0},
 ];
 
-const TW=80, TH=40;
 let t=0, hovId=null;
 
-function iso(ix,iy,iz){
-  return {
-    x: cx + (ix - iy) * TW/2,
-    y: cy + (ix + iy) * TH/2 - iz * 32
-  };
-}
+// ── Stars ──
+const STARS=Array.from({length:220},()=>({
+  x:Math.random()*3000,y:Math.random()*2000,
+  r:Math.random()*1.3,a:Math.random()*0.45+0.05
+}));
 
-function hexR(h){return parseInt(h.slice(1,3),16);}
-function hexG(h){return parseInt(h.slice(3,5),16);}
-function hexB(h){return parseInt(h.slice(5,7),16);}
-function lighten(h,a){return `rgb(${Math.min(255,hexR(h)+a)},${Math.min(255,hexG(h)+a)},${Math.min(255,hexB(h)+a)})`;}
-
-let stars=[];
-function initStars(){stars=Array.from({length:200},()=>({x:Math.random()*3000,y:Math.random()*2000,r:Math.random()*1.3,a:Math.random()*0.5+0.05}));}
-initStars();
-
-let motes=[], smoke=[];
-function initParticles(){
+// ── Honey motes ──
+let motes=[];
+function initMotes(){
   motes=Array.from({length:40},()=>{
     const isl=ISLANDS[Math.floor(Math.random()*ISLANDS.length)];
-    const c=iso(isl.ix+isl.w/2,isl.iy+isl.d/2,isl.h);
-    return {x:c.x+(Math.random()-.5)*100,y:c.y+(Math.random()-.5)*30,vy:-(0.3+Math.random()*.5),vx:(Math.random()-.5)*.3,a:0.4+Math.random()*.5,r:1+Math.random(),isl};
-  });
-  const ws=ISLANDS.find(i=>i.id==='workshop');
-  smoke=Array.from({length:8},()=>{
-    const c=iso(ws.ix+ws.w/2,ws.iy+ws.d/2,ws.h);
-    return {x:c.x+(Math.random()-.5)*25,y:c.y-70,vy:-(0.4+Math.random()*.3),vx:(Math.random()-.5)*.3,a:0.1+Math.random()*.08,r:6+Math.random()*6,ox:Math.random()*Math.PI*2};
+    return {
+      x:cx+isl.ox+(Math.random()-.5)*120,
+      y:cy+isl.oy+(Math.random()-.5)*60,
+      vy:-(0.3+Math.random()*.5),vx:(Math.random()-.5)*.3,
+      a:0.4+Math.random()*.5,r:1+Math.random(),isl
+    };
   });
 }
-initParticles();
 
-function drawIsland(isl,bob){
-  const {ix,iy,w,d,h}=isl;
-  const hov=hovId===isl.id;
+// ── Workshop smoke ──
+let smoke=[];
+function initSmoke(){
+  const ws=ISLANDS.find(i=>i.id==='workshop');
+  smoke=Array.from({length:8},()=>({
+    x:cx+ws.ox+(Math.random()-.5)*30,
+    y:cy+ws.oy-80,
+    vy:-(0.4+Math.random()*.3),vx:(Math.random()-.5)*.3,
+    a:0.1+Math.random()*.08,r:7+Math.random()*6,ox:Math.random()*Math.PI*2
+  }));
+}
 
-  // Draw back-to-front: sort by ix+iy
-  for(let lyr=0;lyr<h;lyr++){
-    // Top faces — back rows first
-    for(let dy=0;dy<d;dy++){
-      for(let dx=0;dx<w;dx++){
-        const p=iso(ix+dx,iy+dy,lyr+1);
-        const px=p.x,py=p.y+bob;
-        ctx.beginPath();
-        ctx.moveTo(px,py);
-        ctx.lineTo(px+TW/2,py+TH/2);
-        ctx.lineTo(px+TW,py);
-        ctx.lineTo(px+TW/2,py-TH/2);
-        ctx.closePath();
-        if(lyr===h-1){
-          const g=ctx.createLinearGradient(px,py-TH/2,px+TW,py+TH/2);
-          g.addColorStop(0,lighten(isl.floor,25));
-          g.addColorStop(1,isl.floor);
-          ctx.fillStyle=g;
-          ctx.fill();
-          ctx.strokeStyle='rgba(0,0,0,0.15)';ctx.lineWidth=0.5;ctx.stroke();
-          // Tile grid detail
-          if((dx+dy)%2===0){
-            ctx.beginPath();
-            ctx.moveTo(px+TW/2,py-TH/2);ctx.lineTo(px+TW/2,py+TH/2);
-            ctx.strokeStyle='rgba(255,255,255,0.04)';ctx.lineWidth=0.5;ctx.stroke();
-          }
-        } else {
-          ctx.fillStyle=isl.fDark;ctx.fill();
-        }
-      }
-    }
-    // Left walls
-    for(let dy=0;dy<d;dy++){
-      const p0=iso(ix,iy+dy,lyr);
-      const p1=iso(ix,iy+dy,lyr+1);
-      const x0=p0.x,y0=p0.y+bob,x1=p1.x,y1=p1.y+bob;
-      ctx.beginPath();
-      ctx.moveTo(x1,y1);
-      ctx.lineTo(x1-TW/2,y1+TH/2);
-      ctx.lineTo(x0-TW/2,y0+TH/2);
-      ctx.lineTo(x0,y0);
-      ctx.closePath();
-      ctx.fillStyle=lyr===0?isl.wDark:isl.wall;
-      ctx.fill();
-      ctx.strokeStyle='rgba(0,0,0,0.25)';ctx.lineWidth=0.5;ctx.stroke();
-    }
-    // Right walls
-    for(let dy=0;dy<d;dy++){
-      const p0=iso(ix+w,iy+dy,lyr);
-      const p1=iso(ix+w,iy+dy,lyr+1);
-      const x0=p0.x,y0=p0.y+bob,x1=p1.x,y1=p1.y+bob;
-      ctx.beginPath();
-      ctx.moveTo(x1,y1);
-      ctx.lineTo(x1+TW/2,y1+TH/2);
-      ctx.lineTo(x0+TW/2,y0+TH/2);
-      ctx.lineTo(x0,y0);
-      ctx.closePath();
-      ctx.fillStyle=lyr===0?isl.wMid:lighten(isl.wall,18);
-      ctx.fill();
-      ctx.strokeStyle='rgba(0,0,0,0.2)';ctx.lineWidth=0.5;ctx.stroke();
-    }
-  }
+function drawRoom(isl, bob){
+  const img=IMGS[isl.room];
+  if(!img) return;
+  const x=cx+isl.ox, y=cy+isl.oy+bob;
+  const w=isl.size, h=isl.size;
 
-  // Hover glow
-  if(hov){
-    const c=iso(ix+w/2,iy+d/2,h);
-    const gx=c.x,gy=c.y+bob;
-    const gr=ctx.createRadialGradient(gx,gy,5,gx,gy,100);
-    gr.addColorStop(0,`rgba(${hexR(isl.accent)},${hexG(isl.accent)},${hexB(isl.accent)},0.15)`);
+  // Glow on hover
+  if(hovId===isl.id){
+    ctx.save();
+    const gr=ctx.createRadialGradient(x,y,20,x,y,isl.size*0.6);
+    const r=parseInt(isl.accent.slice(1,3),16);
+    const g=parseInt(isl.accent.slice(3,5),16);
+    const b=parseInt(isl.accent.slice(5,7),16);
+    gr.addColorStop(0,`rgba(${r},${g},${b},0.2)`);
     gr.addColorStop(1,'rgba(0,0,0,0)');
-    ctx.fillStyle=gr;ctx.beginPath();ctx.arc(gx,gy,100,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle=gr;
+    ctx.beginPath();ctx.arc(x,y,isl.size*0.6,0,Math.PI*2);ctx.fill();
+    ctx.restore();
   }
 
-  // Label
-  const lp=iso(ix+w/2,iy+d,0);
-  ctx.font="600 11px 'Barlow Condensed',sans-serif";
+  // Draw room image centered
+  ctx.drawImage(img, x-w/2, y-h/2, w, h);
+
+  // Accent outline on hover
+  if(hovId===isl.id){
+    ctx.save();
+    ctx.strokeStyle=isl.accent;
+    ctx.lineWidth=2;
+    ctx.globalAlpha=0.4;
+    // Hex clip outline approximation
+    ctx.beginPath();
+    ctx.rect(x-w/2, y-h/2, w, h);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // Label below room
+  ctx.save();
+  ctx.font="600 12px 'Barlow Condensed',sans-serif";
   ctx.textAlign='center';
   ctx.fillStyle=isl.accent;
-  ctx.globalAlpha=0.9;
-  ctx.fillText(isl.label,lp.x,lp.y+bob+32);
-  ctx.globalAlpha=1;
+  ctx.globalAlpha=0.85;
+  ctx.fillText(isl.label, x, y+h/2+18);
+  ctx.restore();
 
-  // Store for hit test
-  const cp=iso(ix+w/2,iy+d/2,h);
-  isl._sx=cp.x; isl._sy=cp.y+bob;
+  // Store screen pos for hit testing
+  isl._sx=x; isl._sy=y; isl._hw=w/2; isl._hh=h/2;
 }
 
-function drawSprites(isl,bob){
-  const cx2=iso(isl.ix+isl.w/2,isl.iy+isl.d/2,isl.h);
-  const bx=cx2.x,by=cx2.y+bob;
-  if(isl.prop&&IMGS[isl.prop]){
-    const img=IMGS[isl.prop],sc=isl.pScale||0.13;
-    const iw=img.width*sc,ih=img.height*sc;
-    ctx.drawImage(img,bx+isl.pOff.x-iw/2,by+isl.pOff.y-ih/2,iw,ih);
-  }
-  if(isl.sprite&&IMGS[isl.sprite]){
-    const img=IMGS[isl.sprite],sc=isl.sScale||0.1;
-    const iw=img.width*sc,ih=img.height*sc;
-    ctx.drawImage(img,bx+isl.sOff.x-iw/2,by+isl.sOff.y,iw,ih);
-  }
+function drawBee(isl, bob){
+  if(!isl.bee||!IMGS[isl.bee]) return;
+  const img=IMGS[isl.bee];
+  const sc=isl.beeScale;
+  const iw=img.width*sc, ih=img.height*sc;
+  const x=cx+isl.ox+isl.beeOff.x;
+  const y=cy+isl.oy+bob+isl.beeOff.y;
+  // Bee bobs slightly faster than room
+  const beeBob=Math.sin(t*1.2+isl.bob)*4;
+  ctx.drawImage(img, x-iw/2, y+beeBob-ih, iw, ih);
+}
+
+function drawConnections(){
+  const q=ISLANDS[0];
+  const qx=cx+q.ox, qy=cy+q.oy+Math.sin(t*0.5)*5;
+  ISLANDS.slice(1).forEach(isl=>{
+    const ix=cx+isl.ox, iy=cy+isl.oy+Math.sin(t*0.5+isl.bob)*5;
+    ctx.save();
+    ctx.beginPath();ctx.moveTo(qx,qy);ctx.lineTo(ix,iy);
+    ctx.strokeStyle='rgba(244,168,37,0.12)';ctx.lineWidth=1;
+    ctx.setLineDash([5,12]);ctx.stroke();ctx.setLineDash([]);
+    ctx.restore();
+  });
 }
 
 function render(){
@@ -388,59 +352,50 @@ function render(){
   ctx.fillStyle='#08080f';ctx.fillRect(0,0,W,H);
 
   // Stars
-  stars.forEach(s=>{
+  STARS.forEach(s=>{
     ctx.beginPath();ctx.arc(s.x%W,s.y%H,s.r,0,Math.PI*2);
     ctx.fillStyle=`rgba(255,255,255,${s.a})`;ctx.fill();
   });
 
-  // Nebula
-  const nb=ctx.createRadialGradient(cx,cy,50,cx,cy,Math.max(W,H)*0.55);
-  nb.addColorStop(0,'rgba(244,168,37,0.028)');nb.addColorStop(1,'rgba(0,0,0,0)');
+  // Nebula glow
+  const nb=ctx.createRadialGradient(cx,cy,40,cx,cy,Math.max(W,H)*0.55);
+  nb.addColorStop(0,'rgba(244,168,37,0.025)');nb.addColorStop(1,'rgba(0,0,0,0)');
   ctx.fillStyle=nb;ctx.fillRect(0,0,W,H);
 
-  // Connection lines
-  const q=ISLANDS[0];
-  const qc=iso(q.ix+q.w/2,q.iy+q.d/2,q.h);
-  ISLANDS.slice(1).forEach(isl=>{
-    const ic=iso(isl.ix+isl.w/2,isl.iy+isl.d/2,isl.h);
-    ctx.beginPath();
-    ctx.moveTo(qc.x,qc.y+Math.sin(t*0.5+q.bob)*5);
-    ctx.lineTo(ic.x,ic.y+Math.sin(t*0.5+isl.bob)*5);
-    ctx.strokeStyle='rgba(244,168,37,0.1)';ctx.lineWidth=1;
-    ctx.setLineDash([4,10]);ctx.stroke();ctx.setLineDash([]);
-  });
+  drawConnections();
 
-  // Sort islands by depth (ix+iy ascending = back first)
-  const sorted=[...ISLANDS].sort((a,b)=>(a.ix+a.iy)-(b.ix+b.iy));
-
+  // Draw rooms back-to-front by oy
+  const sorted=[...ISLANDS].sort((a,b)=>a.oy-b.oy);
   sorted.forEach(isl=>{
-    const bob=Math.sin(t*0.45+isl.bob)*5;
-    drawIsland(isl,bob);
-  });
-  sorted.forEach(isl=>{
-    const bob=Math.sin(t*0.45+isl.bob)*5;
-    drawSprites(isl,bob);
+    const bob=Math.sin(t*0.45+isl.bob)*6;
+    drawRoom(isl,bob);
   });
 
-  // Motes
+  // Draw bee sprites on top of all rooms
+  sorted.forEach(isl=>{
+    const bob=Math.sin(t*0.45+isl.bob)*6;
+    drawBee(isl,bob);
+  });
+
+  // Honey motes
   motes.forEach(p=>{
     p.y+=p.vy;p.x+=p.vx;p.a-=0.002;
-    if(p.a<=0||p.y<30){
+    if(p.a<=0||p.y<40){
       const isl=p.isl;
-      const c=iso(isl.ix+isl.w/2,isl.iy+isl.d/2,isl.h);
-      p.x=c.x+(Math.random()-.5)*100;p.y=c.y+20;p.a=0.35+Math.random()*.45;
+      p.x=cx+isl.ox+(Math.random()-.5)*120;
+      p.y=cy+isl.oy+20;p.a=0.35+Math.random()*.45;
     }
     ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
     ctx.fillStyle=`rgba(244,168,37,${p.a})`;ctx.fill();
   });
 
   // Smoke
+  const ws=ISLANDS.find(i=>i.id==='workshop');
   smoke.forEach(s=>{
-    const ws=ISLANDS.find(i=>i.id==='workshop');
-    s.y+=s.vy;s.x+=Math.sin(t*.9+s.ox)*.2+s.vx;s.a-=0.0012;
-    if(s.a<=0||s.y<80){
-      const c=iso(ws.ix+ws.w/2,ws.iy+ws.d/2,ws.h);
-      s.x=c.x+(Math.random()-.5)*25;s.y=c.y-70;s.a=0.09;
+    s.y+=s.vy;s.x+=Math.sin(t*.9+s.ox)*.25+s.vx;s.a-=0.0012;
+    if(s.a<=0||s.y<50){
+      s.x=cx+ws.ox+(Math.random()-.5)*30;
+      s.y=cy+ws.oy-80;s.a=0.09;
     }
     ctx.beginPath();ctx.arc(s.x,s.y,s.r,0,Math.PI*2);
     ctx.fillStyle=`rgba(160,160,160,${s.a})`;ctx.fill();
@@ -450,12 +405,13 @@ function render(){
   requestAnimationFrame(render);
 }
 
+// Hit testing
 canvas.addEventListener('mousemove',e=>{
   const mx=e.clientX,my=e.clientY;
   hovId=null;
   ISLANDS.forEach(isl=>{
-    if(!isl._sx)return;
-    if(Math.abs(mx-isl._sx)<90&&Math.abs(my-isl._sy)<70)hovId=isl.id;
+    if(!isl._sx) return;
+    if(Math.abs(mx-isl._sx)<isl._hw&&Math.abs(my-isl._sy)<isl._hh) hovId=isl.id;
   });
   const tt=document.getElementById('tooltip');
   if(hovId){
@@ -469,9 +425,50 @@ canvas.addEventListener('mousemove',e=>{
 });
 canvas.addEventListener('mouseleave',()=>{hovId=null;document.getElementById('tooltip').style.display='none';});
 
-render();
+// Scout fly-off
+let scoutT=0;
+setInterval(()=>{
+  const isl=ISLANDS.find(i=>i.id==='research');
+  if(!isl||scoutT>0)return;
+  scoutT=6000;
+  // Animate scout bee off-screen and back
+  const startX=cx+isl.ox+isl.beeOff.x;
+  const startY=cy+isl.oy+isl.beeOff.y;
+  const origOff={...isl.beeOff};
+  let elapsed=0;
+  const fly=setInterval(()=>{
+    elapsed+=50;
+    if(elapsed<2500){
+      const p=elapsed/2500;
+      isl.beeOff={x:origOff.x+p*(-W),y:origOff.y-p*100};
+    } else if(elapsed<3000){
+      isl.beeOff={x:W,y:origOff.y};
+    } else if(elapsed<5500){
+      const p=(elapsed-3000)/2500;
+      isl.beeOff={x:W-p*(W+origOff.x+W/2),y:origOff.y-100+p*100};
+    } else {
+      isl.beeOff={...origOff};
+      scoutT=0;
+      clearInterval(fly);
+    }
+  },50);
+},14000);
 
-// HUD DATA
+// Load all assets then start
+async function init(){
+  const loads=[];
+  ISLANDS.forEach(isl=>{
+    loads.push(loadImg(isl.room, ROOMS+'/'+isl.room+'.png'));
+    if(isl.bee) loads.push(loadImg(isl.bee, ASSETS+'/'+isl.bee+'.png'));
+  });
+  await Promise.all(loads);
+  initMotes();
+  initSmoke();
+  render();
+}
+init();
+
+// ── HUD DATA ──
 const ADEFS=[
   {n:'auditor',p:1},{n:'bard',p:1},{n:'chancellor',p:1},{n:'engineer',p:1},
   {n:'forager',p:2},{n:'foreman',p:1},{n:'inspector',p:1},{n:'nurse',p:1},
