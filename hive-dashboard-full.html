@@ -1118,6 +1118,70 @@ const game = new Phaser.Game({
   scene: [HiveScene],
   scale: { mode: Phaser.Scale.RESIZE, autoCenter: Phaser.Scale.CENTER_BOTH }
 });
+<script>
+// ── HIVE Live Data Feed ──────────────────────────────────────
+const CHANCELLOR = 'http://192.168.50.10:8001';
+
+function updateDashboard(d) {
+  const f = d.financial;
+  const m = d.market;
+  const dec = d.decree;
+  const agents = d.agents;
+
+  // Financial
+  const td = document.getElementById('m-today');
+  const sp = document.getElementById('m-spend');
+  const dc = document.getElementById('m-decrees');
+  if (td) td.textContent = '$' + (f.revenue_today || 0).toFixed(2);
+  if (sp) sp.textContent = '$' + (f.recovery_usd || 0).toFixed(2) + ' recovered';
+  if (dc) dc.textContent = f.recovery_pct + '% of $2,000';
+
+  // Market signal
+  const ns = document.querySelector('.market-niche, [class*="niche"]');
+  const vg = document.querySelector('.vigor-value, [class*="vigor"]');
+  if (ns) ns.textContent = m.niche || '—';
+  if (vg) vg.textContent = (m.vigor || 0) + ' / 10';
+
+  // Agent badges — update online/silent status
+  agents.online.forEach(name => {
+    const rows = document.querySelectorAll('.agent-row');
+    rows.forEach(row => {
+      if (row.textContent.toLowerCase().includes(name)) {
+        const badge = row.querySelector('.badge');
+        if (badge) {
+          badge.textContent = 'ONLINE';
+          badge.className = 'badge badge-online';
+        }
+      }
+    });
+  });
+
+  // Decree panel
+  if (dec && dec.decision) {
+    const body = document.getElementById('decree-body');
+    if (body) {
+      body.innerHTML = `
+        Queen decree: <strong>${dec.decision.toUpperCase()}</strong><br>
+        ${dec.reasoning ? dec.reasoning.substring(0, 120) + '...' : ''}<br>
+        <div class="decree-id">Worker: ${dec.worker || '—'} · Spend: $${dec.spend || 0}</div>
+      `;
+    }
+  }
+}
+
+async function fetchHiveStatus() {
+  try {
+    const r = await fetch(CHANCELLOR + '/hive-status');
+    const d = await r.json();
+    updateDashboard(d);
+  } catch(e) {
+    console.warn('Hive status fetch failed:', e);
+  }
+}
+
+// Fetch immediately and every 30 seconds
+fetchHiveStatus();
+setInterval(fetchHiveStatus, 30000);
 
 window.addEventListener('resize', () => game.scale.resize(window.innerWidth, window.innerHeight));
 </script>
