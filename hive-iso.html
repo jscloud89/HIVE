@@ -1,0 +1,1339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>THE HIVE — Command World</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700;900&family=Share+Tech+Mono&family=VT323&family=Barlow+Condensed:wght@300;400;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/phaser@3.88.2/dist/phaser.min.js"></script>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+:root {
+  --gold: #F4A825;
+  --gold-dim: #a86e10;
+  --gold-bright: #ffd060;
+  --bg: #08080f;
+  --text: #c8d0dc;
+  --text-dim: #4a5568;
+  --green: #39d98a;
+  --red: #e8403a;
+  --blue: #4a9eff;
+  --mono: 'Share Tech Mono', monospace;
+  --head: 'Cinzel Decorative', serif;
+  --vt: 'VT323', monospace;
+  --bar: 'Barlow Condensed', sans-serif;
+}
+html, body { width:100%; height:100%; background:var(--bg); overflow:hidden; }
+
+/* Scanlines */
+body::after {
+  content:'';
+  position:fixed;
+  inset:0;
+  background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.06) 2px,rgba(0,0,0,0.06) 4px);
+  pointer-events:none;
+  z-index:1000;
+}
+
+#game-canvas { position:fixed; inset:0; }
+
+/* ── HUD ── */
+#hud {
+  position:fixed;
+  inset:0;
+  pointer-events:none;
+  z-index:100;
+  font-family:var(--mono);
+}
+
+/* TOP BAR */
+#top-bar {
+  position:absolute;
+  top:0; left:0; right:0;
+  height:48px;
+  background:rgba(8,8,15,0.85);
+  border-bottom:1px solid rgba(244,168,37,0.3);
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:0 20px;
+  backdrop-filter:blur(8px);
+}
+
+.hive-logo {
+  font-family:var(--head);
+  font-size:18px;
+  color:var(--gold);
+  letter-spacing:4px;
+  text-shadow:0 0 20px rgba(244,168,37,0.5);
+}
+
+.hive-logo span { color:var(--text-dim); font-size:11px; letter-spacing:2px; }
+
+#live-clock {
+  font-family:var(--vt);
+  font-size:28px;
+  color:var(--gold);
+  text-shadow:0 0 10px rgba(244,168,37,0.4);
+  letter-spacing:3px;
+}
+
+.top-status {
+  display:flex;
+  gap:16px;
+  align-items:center;
+  font-size:11px;
+  color:var(--text-dim);
+  letter-spacing:1px;
+}
+
+.status-dot {
+  width:6px;height:6px;border-radius:50%;
+  background:var(--green);
+  box-shadow:0 0 6px var(--green);
+  display:inline-block;
+  animation:pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+/* LEFT PANEL */
+#left-panel {
+  position:absolute;
+  top:56px; left:0;
+  width:200px;
+  background:rgba(8,8,15,0.82);
+  border-right:1px solid rgba(244,168,37,0.2);
+  border-bottom:1px solid rgba(244,168,37,0.2);
+  padding:12px;
+  backdrop-filter:blur(8px);
+  pointer-events:all;
+  max-height:calc(100vh - 56px);
+  overflow-y:auto;
+}
+
+.panel-title {
+  font-family:var(--bar);
+  font-size:9px;
+  font-weight:600;
+  letter-spacing:4px;
+  color:var(--gold-dim);
+  text-transform:uppercase;
+  margin-bottom:10px;
+  border-bottom:1px solid rgba(244,168,37,0.15);
+  padding-bottom:6px;
+}
+
+.agent-row {
+  display:flex;
+  align-items:center;
+  gap:6px;
+  padding:4px 6px;
+  margin-bottom:2px;
+  border-radius:2px;
+  transition:background 0.2s;
+  cursor:default;
+}
+
+.agent-row:hover { background:rgba(244,168,37,0.05); }
+
+.agent-dot {
+  width:5px;height:5px;
+  border-radius:50%;
+  flex-shrink:0;
+}
+.agent-dot.online { background:var(--green); box-shadow:0 0 5px var(--green); animation:pulse 2s ease-in-out infinite; }
+.agent-dot.silent { background:var(--text-dim); }
+.agent-dot.phase2 { background:var(--blue); }
+
+.agent-name {
+  font-size:11px;
+  color:var(--text-dim);
+  text-transform:lowercase;
+  flex:1;
+}
+.agent-row.online .agent-name { color:var(--text); }
+
+.agent-tag {
+  font-size:8px;
+  letter-spacing:1px;
+  text-transform:uppercase;
+  padding:1px 5px;
+  border-radius:1px;
+}
+.agent-tag.online { color:var(--green); border:1px solid rgba(57,217,138,0.3); }
+.agent-tag.silent { color:var(--text-dim); border:1px solid rgba(90,100,120,0.3); }
+.agent-tag.phase2 { color:var(--blue); border:1px solid rgba(74,158,255,0.3); }
+
+/* RIGHT PANEL */
+#right-panel {
+  position:absolute;
+  top:56px; right:0;
+  width:220px;
+  background:rgba(8,8,15,0.82);
+  border-left:1px solid rgba(244,168,37,0.2);
+  border-bottom:1px solid rgba(244,168,37,0.2);
+  padding:12px;
+  backdrop-filter:blur(8px);
+  pointer-events:all;
+}
+
+.fin-row {
+  display:flex;
+  justify-content:space-between;
+  align-items:baseline;
+  margin-bottom:8px;
+}
+.fin-label { font-size:9px; color:var(--text-dim); letter-spacing:2px; text-transform:uppercase; }
+.fin-val { font-family:var(--vt); font-size:22px; color:var(--gold); line-height:1; }
+.fin-val.green { color:var(--green); }
+
+/* Recovery bar */
+.recovery-wrap {
+  margin:12px 0 8px;
+}
+.recovery-label {
+  display:flex;
+  justify-content:space-between;
+  font-size:9px;
+  color:var(--text-dim);
+  letter-spacing:1px;
+  margin-bottom:4px;
+  text-transform:uppercase;
+}
+.recovery-bar {
+  height:5px;
+  background:rgba(244,168,37,0.1);
+  border:1px solid rgba(244,168,37,0.2);
+  overflow:hidden;
+}
+.recovery-fill {
+  height:100%;
+  background:linear-gradient(90deg, var(--gold-dim), var(--gold));
+  transition:width 2s ease;
+}
+
+/* Honey split */
+.honey-bars { margin-top:10px; }
+.honey-row {
+  display:flex;
+  align-items:center;
+  gap:6px;
+  margin-bottom:5px;
+}
+.honey-label { font-size:9px; color:var(--text-dim); width:70px; text-transform:uppercase; letter-spacing:1px; }
+.honey-bar-wrap { flex:1; height:4px; background:rgba(255,255,255,0.05); border-radius:2px; overflow:hidden; }
+.honey-bar-fill { height:100%; border-radius:2px; transition:width 1s ease; }
+.honey-amt { font-family:var(--vt); font-size:14px; color:var(--gold); width:36px; text-align:right; }
+
+/* BOTTOM TICKER */
+#bottom-bar {
+  position:absolute;
+  bottom:0; left:0; right:0;
+  height:36px;
+  background:rgba(8,8,15,0.85);
+  border-top:1px solid rgba(244,168,37,0.2);
+  display:flex;
+  align-items:center;
+  overflow:hidden;
+  backdrop-filter:blur(8px);
+}
+
+.ticker-label {
+  font-family:var(--bar);
+  font-size:9px;
+  font-weight:700;
+  letter-spacing:3px;
+  color:var(--gold);
+  padding:0 12px;
+  white-space:nowrap;
+  border-right:1px solid rgba(244,168,37,0.2);
+  height:100%;
+  display:flex;
+  align-items:center;
+}
+
+.ticker-track {
+  flex:1;
+  overflow:hidden;
+  height:100%;
+  display:flex;
+  align-items:center;
+}
+
+.ticker-inner {
+  display:flex;
+  gap:40px;
+  animation:ticker 40s linear infinite;
+  white-space:nowrap;
+}
+
+@keyframes ticker {
+  0% { transform:translateX(0); }
+  100% { transform:translateX(-50%); }
+}
+
+.ticker-item {
+  font-size:11px;
+  color:var(--text-dim);
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+
+.ticker-item .t-agent { color:var(--gold); text-transform:uppercase; font-size:10px; }
+.ticker-item .t-sep { color:var(--text-dim); opacity:0.4; }
+
+/* MARKET SIGNAL */
+#market-panel {
+  position:absolute;
+  bottom:44px;
+  left:50%;
+  transform:translateX(-50%);
+  background:rgba(8,8,15,0.88);
+  border:1px solid rgba(244,168,37,0.3);
+  padding:10px 20px;
+  display:flex;
+  align-items:center;
+  gap:16px;
+  backdrop-filter:blur(8px);
+  pointer-events:all;
+  min-width:500px;
+}
+
+.market-niche {
+  font-family:var(--bar);
+  font-size:13px;
+  font-weight:600;
+  color:var(--text);
+  flex:1;
+  letter-spacing:0.5px;
+}
+
+.vigor-display {
+  font-family:var(--vt);
+  font-size:32px;
+  color:var(--gold-bright);
+  text-shadow:0 0 15px rgba(244,168,37,0.4);
+  line-height:1;
+}
+
+.vigor-label { font-size:9px; color:var(--text-dim); letter-spacing:2px; text-align:center; text-transform:uppercase; }
+
+.market-tag {
+  font-size:9px;
+  letter-spacing:2px;
+  padding:3px 8px;
+  border:1px solid rgba(244,168,37,0.4);
+  color:var(--gold);
+  text-transform:uppercase;
+}
+.market-tag.green { border-color:rgba(57,217,138,0.4); color:var(--green); }
+
+/* ── ROYAL DECREE OVERLAY ── */
+#decree-overlay {
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,0);
+  z-index:500;
+  display:flex;
+  align-items:flex-start;
+  justify-content:center;
+  padding-top:60px;
+  pointer-events:none;
+  transition:background 0.5s;
+}
+
+#decree-overlay.active {
+  background:rgba(0,0,0,0.6);
+  pointer-events:all;
+}
+
+#decree-panel {
+  background:linear-gradient(135deg, #0d0d1a, #1a1000);
+  border:2px solid var(--gold);
+  padding:28px 36px;
+  max-width:500px;
+  width:90%;
+  transform:translateY(-120%);
+  transition:transform 0.6s cubic-bezier(0.175,0.885,0.32,1.275);
+  box-shadow:0 0 60px rgba(244,168,37,0.3), inset 0 0 40px rgba(244,168,37,0.05);
+  text-align:center;
+  pointer-events:all;
+}
+
+#decree-overlay.active #decree-panel {
+  transform:translateY(0);
+}
+
+.decree-crown {
+  font-size:40px;
+  animation:crownPulse 1.5s ease-in-out infinite;
+  display:block;
+  margin-bottom:8px;
+}
+
+@keyframes crownPulse {
+  0%,100% { filter:drop-shadow(0 0 8px rgba(244,168,37,0.8)); transform:scale(1); }
+  50% { filter:drop-shadow(0 0 20px rgba(244,168,37,1)); transform:scale(1.08); }
+}
+
+.decree-title {
+  font-family:var(--head);
+  font-size:14px;
+  letter-spacing:6px;
+  color:var(--gold);
+  margin-bottom:16px;
+  text-shadow:0 0 15px rgba(244,168,37,0.5);
+}
+
+.decree-content {
+  font-family:var(--mono);
+  font-size:12px;
+  color:var(--text);
+  line-height:1.7;
+  margin-bottom:20px;
+  text-align:left;
+  background:rgba(244,168,37,0.04);
+  border:1px solid rgba(244,168,37,0.15);
+  padding:12px 16px;
+}
+
+.decree-reasoning {
+  font-size:11px;
+  color:var(--text-dim);
+  font-style:italic;
+  line-height:1.6;
+  margin-bottom:20px;
+  text-align:left;
+}
+
+.decree-btns {
+  display:flex;
+  gap:12px;
+  justify-content:center;
+}
+
+.decree-btn {
+  font-family:var(--head);
+  font-size:11px;
+  letter-spacing:3px;
+  padding:10px 28px;
+  border:none;
+  cursor:pointer;
+  transition:all 0.2s;
+}
+
+.decree-btn.approve {
+  background:rgba(57,217,138,0.15);
+  border:1px solid var(--green);
+  color:var(--green);
+}
+
+.decree-btn.approve:hover {
+  background:var(--green);
+  color:var(--bg);
+}
+
+.decree-btn.deny {
+  background:rgba(232,64,58,0.15);
+  border:1px solid var(--red);
+  color:var(--red);
+}
+
+.decree-btn.deny:hover {
+  background:var(--red);
+  color:var(--bg);
+}
+
+/* QUEEN CHAT */
+#queen-chat {
+  position:fixed;
+  bottom:36px;
+  right:0;
+  width:220px;
+  background:rgba(8,8,15,0.92);
+  border-top:1px solid rgba(244,168,37,0.3);
+  border-left:1px solid rgba(244,168,37,0.2);
+  z-index:200;
+  pointer-events:all;
+  transform:translateY(100%);
+  transition:transform 0.3s ease;
+}
+
+#queen-chat.open { transform:translateY(0); }
+
+.qc-header {
+  padding:8px 12px;
+  border-bottom:1px solid rgba(244,168,37,0.2);
+  cursor:pointer;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+}
+
+.qc-title {
+  font-family:var(--bar);
+  font-size:9px;
+  font-weight:700;
+  letter-spacing:3px;
+  color:var(--gold);
+  text-transform:uppercase;
+}
+
+.qc-messages {
+  height:180px;
+  overflow-y:auto;
+  padding:10px;
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+}
+
+.qc-msg {
+  font-size:11px;
+  line-height:1.5;
+  padding:6px 8px;
+  max-width:95%;
+}
+
+.qc-msg.user {
+  background:rgba(244,168,37,0.08);
+  border:1px solid rgba(244,168,37,0.2);
+  color:var(--text);
+  align-self:flex-end;
+  font-family:var(--mono);
+}
+
+.qc-msg.queen {
+  background:rgba(255,255,255,0.04);
+  border:1px solid rgba(255,255,255,0.08);
+  color:var(--text);
+  align-self:flex-start;
+}
+
+.qc-msg.thinking {
+  color:var(--text-dim);
+  font-size:10px;
+  animation:pulse 1s step-end infinite;
+}
+
+.qc-input-row {
+  display:flex;
+  border-top:1px solid rgba(244,168,37,0.15);
+}
+
+.qc-input {
+  flex:1;
+  background:transparent;
+  border:none;
+  color:var(--text);
+  font-family:var(--mono);
+  font-size:11px;
+  padding:8px 10px;
+  outline:none;
+}
+
+.qc-send {
+  background:transparent;
+  border:none;
+  border-left:1px solid rgba(244,168,37,0.2);
+  color:var(--gold);
+  font-family:var(--mono);
+  font-size:11px;
+  padding:8px 10px;
+  cursor:pointer;
+  transition:background 0.2s;
+}
+
+.qc-send:hover { background:rgba(244,168,37,0.1); }
+
+#queen-toggle {
+  position:fixed;
+  bottom:44px;
+  right:220px;
+  background:rgba(8,8,15,0.9);
+  border:1px solid rgba(244,168,37,0.4);
+  border-right:none;
+  color:var(--gold);
+  font-family:var(--mono);
+  font-size:10px;
+  letter-spacing:2px;
+  padding:6px 12px;
+  cursor:pointer;
+  z-index:201;
+  pointer-events:all;
+  transition:all 0.2s;
+  writing-mode:vertical-rl;
+  text-orientation:mixed;
+  transform:rotate(180deg);
+}
+
+#queen-toggle:hover { background:rgba(244,168,37,0.1); }
+</style>
+</head>
+<body>
+<div id="game-canvas"></div>
+
+<!-- HUD -->
+<div id="hud">
+
+  <!-- TOP BAR -->
+  <div id="top-bar">
+    <div class="hive-logo">THE HIVE <span>// COMMAND WORLD</span></div>
+    <div id="live-clock">00:00:00</div>
+    <div class="top-status">
+      <span class="status-dot"></span>
+      <span id="system-status">CHANCELLOR ONLINE</span>
+      <span style="color:rgba(244,168,37,0.3)">|</span>
+      <span id="agent-count">5 ACTIVE</span>
+      <span style="color:rgba(244,168,37,0.3)">|</span>
+      <span id="recovery-top">1.5% RECOVERED</span>
+    </div>
+  </div>
+
+  <!-- LEFT PANEL — AGENTS -->
+  <div id="left-panel">
+    <div class="panel-title">⬡ Agents</div>
+    <div id="agent-list"></div>
+  </div>
+
+  <!-- RIGHT PANEL — FINANCIALS -->
+  <div id="right-panel">
+    <div class="panel-title">⬡ Chancellor Ledger</div>
+    <div class="fin-row">
+      <div>
+        <div class="fin-label">Today</div>
+        <div class="fin-val" id="rev-today">$0.00</div>
+      </div>
+      <div style="text-align:right">
+        <div class="fin-label">MTD</div>
+        <div class="fin-val" id="rev-mtd">$0.00</div>
+      </div>
+    </div>
+    <div class="fin-row">
+      <div>
+        <div class="fin-label">Net Profit</div>
+        <div class="fin-val green" id="net-profit">$0.00</div>
+      </div>
+      <div style="text-align:right">
+        <div class="fin-label">All-Time</div>
+        <div class="fin-val" id="gross-all">$0.00</div>
+      </div>
+    </div>
+
+    <div class="recovery-wrap">
+      <div class="recovery-label">
+        <span>Recovery</span>
+        <span id="rec-pct">0%</span>
+      </div>
+      <div class="recovery-bar">
+        <div class="recovery-fill" id="rec-fill" style="width:0%"></div>
+      </div>
+    </div>
+
+    <div class="panel-title" style="margin-top:12px">⬡ Honey Split</div>
+    <div class="honey-bars" id="honey-bars"></div>
+  </div>
+
+  <!-- MARKET PANEL -->
+  <div id="market-panel">
+    <div>
+      <div style="font-size:9px;color:var(--text-dim);letter-spacing:3px;text-transform:uppercase;margin-bottom:4px">Market Signal</div>
+      <div class="market-niche" id="market-niche">Scanning niches...</div>
+      <div style="display:flex;gap:8px;margin-top:6px">
+        <div class="market-tag" id="market-dir">—</div>
+        <div class="market-tag" id="market-action">—</div>
+        <div class="market-tag green" id="market-mhr">—</div>
+      </div>
+    </div>
+    <div style="text-align:center">
+      <div class="vigor-display" id="vigor-num">—</div>
+      <div class="vigor-label">Vigor / 10</div>
+    </div>
+    <div style="text-align:center">
+      <div style="font-size:9px;color:var(--text-dim);letter-spacing:2px;text-transform:uppercase;margin-bottom:4px">Decree</div>
+      <div id="decree-badge" style="font-family:var(--bar);font-size:13px;font-weight:700;letter-spacing:3px;color:var(--green)">—</div>
+    </div>
+  </div>
+
+  <!-- BOTTOM TICKER -->
+  <div id="bottom-bar">
+    <div class="ticker-label">⬡ ACTIVITY</div>
+    <div class="ticker-track">
+      <div class="ticker-inner" id="ticker-inner">
+        <div class="ticker-item"><span class="t-agent">HIVE</span><span class="t-sep">//</span><span>Loading activity feed...</span></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ROYAL DECREE OVERLAY -->
+<div id="decree-overlay">
+  <div id="decree-panel">
+    <span class="decree-crown">👑</span>
+    <div class="decree-title">Royal Decree</div>
+    <div class="decree-content" id="decree-content">
+      <div>NICHE: <span id="decree-niche">—</span></div>
+      <div>WORKER: <span id="decree-worker">—</span></div>
+      <div>BUDGET: <span id="decree-spend">—</span></div>
+      <div>MODEL: <span id="decree-model">—</span></div>
+    </div>
+    <div class="decree-reasoning" id="decree-reasoning">—</div>
+    <div class="decree-btns">
+      <button class="decree-btn approve" onclick="closeDecree()">✓ ACKNOWLEDGED</button>
+      <button class="decree-btn deny" onclick="closeDecree()">✗ DISMISS</button>
+    </div>
+  </div>
+</div>
+
+<!-- QUEEN CHAT -->
+<button id="queen-toggle" onclick="toggleQueenChat()">⬡ QUEEN</button>
+<div id="queen-chat">
+  <div class="qc-header" onclick="toggleQueenChat()">
+    <span class="qc-title">⬡ Queen — Direct Channel</span>
+    <span style="font-size:10px;color:var(--text-dim)">▼</span>
+  </div>
+  <div class="qc-messages" id="qc-messages">
+    <div class="qc-msg queen">Queen online. Issue your directive.</div>
+  </div>
+  <div class="qc-input-row">
+    <input class="qc-input" id="qc-input" placeholder="Directive..." onkeydown="if(event.key==='Enter')sendQueenMsg()">
+    <button class="qc-send" onclick="sendQueenMsg()">→</button>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════
+// CONFIG
+// ══════════════════════════════════════════════════════
+const API = 'http://192.168.50.10:8001';
+const REFRESH = 30000;
+let hiveData = null;
+let decreeShown = false;
+
+// ══════════════════════════════════════════════════════
+// PHASER SCENE
+// ══════════════════════════════════════════════════════
+class HiveWorld extends Phaser.Scene {
+  constructor() { super('HiveWorld'); }
+
+  preload() {
+    // Generate all graphics procedurally — no external assets
+  }
+
+  create() {
+    const W = this.scale.width;
+    const H = this.scale.height;
+
+    // Starfield background
+    this.createStarfield(W, H);
+
+    // Island definitions — isometric world center
+    const cx = W / 2;
+    const cy = H / 2 - 20;
+
+    this.islands = [
+      { id:'queen',    label:"Queen's Court",    x:cx,      y:cy-140,  color:0xF4A825, accent:0xffd060, agents:['queen'],                    size:1.3 },
+      { id:'research', label:'Research Station',  x:cx-280,  y:cy-60,   color:0x2d7a4a, accent:0x39d98a, agents:['scout','bard'],             size:1.0 },
+      { id:'wealth',   label:'Wealth Garden',     x:cx+280,  y:cy-60,   color:0x4a2d7a, accent:0x9b59b6, agents:['forager','treasurer'],      size:1.0 },
+      { id:'vault',    label:'The Vault',         x:cx,      y:cy+60,   color:0x7a5a2d, accent:0xcd853f, agents:['chancellor'],               size:1.1 },
+      { id:'workshop', label:'The Workshop',      x:cx-240,  y:cy+140,  color:0x2d3a4a, accent:0x4a9eff, agents:['foreman','engineer'],       size:1.0 },
+      { id:'security', label:'Security Fortress', x:cx+240,  y:cy+140,  color:0x1a2a3a, accent:0x4a6eff, agents:['supervisor','warden'],      size:1.0 },
+      { id:'apiary',   label:'The Apiary',        x:cx,      y:cy+240,  color:0x5a3a10, accent:0xF4A825, agents:['nurse','quartermaster'],    size:1.0 },
+    ];
+
+    // Draw connection lines
+    this.drawConnections();
+
+    // Draw islands
+    this.islandGraphics = [];
+    this.islands.forEach(isl => this.drawIsland(isl));
+
+    // Honey particle system
+    this.honeyParticles = this.createHoneyParticles();
+
+    // Bee sprites
+    this.bees = {};
+    this.createBees();
+
+    // Workshop smoke
+    this.workshopSmoke = this.createWorkshopSmoke();
+
+    // Floating labels
+    this.islands.forEach(isl => this.drawIslandLabel(isl));
+
+    // Gentle camera bob
+    this.cameras.main.setBackgroundColor(0x08080f);
+
+    // Update loop
+    this.time.addEvent({ delay:100, callback:this.updateBees, callbackScope:this, loop:true });
+  }
+
+  createStarfield(W, H) {
+    const stars = this.add.graphics();
+    for (let i = 0; i < 200; i++) {
+      const x = Phaser.Math.Between(0, W);
+      const y = Phaser.Math.Between(0, H);
+      const r = Math.random() * 1.5;
+      const a = Math.random() * 0.6 + 0.1;
+      stars.fillStyle(0xffffff, a);
+      stars.fillCircle(x, y, r);
+    }
+    // Subtle nebula glow
+    const nebula = this.add.graphics();
+    nebula.fillStyle(0xF4A825, 0.02);
+    nebula.fillEllipse(W/2, H/2, W*0.8, H*0.5);
+  }
+
+  drawConnections() {
+    const g = this.add.graphics();
+    g.lineStyle(1, 0xF4A825, 0.12);
+    const queen = this.islands[0];
+    this.islands.slice(1).forEach(isl => {
+      g.beginPath();
+      g.moveTo(queen.x, queen.y);
+      g.lineTo(isl.x, isl.y);
+      g.strokePath();
+    });
+  }
+
+  drawIsland(isl) {
+    const g = this.add.graphics();
+    const s = isl.size;
+    const x = isl.x, y = isl.y;
+
+    // Shadow
+    g.fillStyle(0x000000, 0.3);
+    g.fillEllipse(x, y + 55*s, 160*s, 30*s);
+
+    // Isometric box — bottom face
+    g.fillStyle(isl.color, 0.6);
+    const bw = 80*s, bh = 40*s, bd = 22*s;
+    g.fillRect(x - bw, y + bd, bw*2, bh);
+
+    // Left face (darker)
+    g.fillStyle(Phaser.Display.Color.ValueToColor(isl.color).darken(30).color, 0.85);
+    g.fillPoints([
+      {x: x - bw, y: y + bd},
+      {x: x - bw, y: y + bd + bh},
+      {x: x - bw, y: y + bd + bh + bd},
+      {x: x - bw + bw, y: y + bd + bh},
+      {x: x - bw + bw, y: y + bd},
+      {x: x - bw, y: y + bd - bd}
+    ], true);
+
+    // Top face (hexagonal platform)
+    const hw = 80*s;
+    g.fillStyle(isl.accent, 0.2);
+    g.fillStyle(isl.color, 0.9);
+
+    // Draw hex top
+    const hex = [];
+    for (let i = 0; i < 6; i++) {
+      const angle = (Math.PI / 3) * i - Math.PI/6;
+      hex.push({ x: x + Math.cos(angle) * hw, y: y + Math.sin(angle) * hw * 0.5 });
+    }
+    g.fillPoints(hex, true);
+
+    // Hex outline
+    g.lineStyle(1.5, isl.accent, 0.7);
+    g.strokePoints(hex, true);
+
+    // Inner hex honeycomb detail
+    g.lineStyle(0.5, isl.accent, 0.3);
+    for (let i = 0; i < 6; i++) {
+      const a1 = (Math.PI/3)*i - Math.PI/6;
+      const a2 = (Math.PI/3)*(i+1) - Math.PI/6;
+      g.beginPath();
+      g.moveTo(x, y);
+      g.lineTo(x + Math.cos(a1)*hw*0.5, y + Math.sin(a1)*hw*0.25);
+      g.strokePath();
+    }
+
+    // Island-specific features
+    this.drawIslandFeature(g, isl, x, y, s);
+
+    // Glow ring
+    g.lineStyle(1, isl.accent, 0.15);
+    g.strokeEllipse(x, y + 5, hw*2.2, hw*0.7);
+
+    isl.graphic = g;
+  }
+
+  drawIslandFeature(g, isl, x, y, s) {
+    switch(isl.id) {
+      case 'queen':
+        // Crown/tower
+        g.fillStyle(0xffd060, 0.9);
+        g.fillRect(x-6, y-50*s, 12, 40*s);
+        g.fillStyle(0xF4A825, 1);
+        g.fillTriangle(x-12, y-50*s, x+12, y-50*s, x, y-70*s);
+        g.fillStyle(0xffd060, 0.8);
+        for (let i=-1;i<=1;i++) {
+          g.fillCircle(x+i*8, y-72*s, 4);
+        }
+        break;
+      case 'research':
+        // Telescope
+        g.fillStyle(0x39d98a, 0.8);
+        g.fillRect(x-3, y-40*s, 6, 35*s);
+        g.fillStyle(0x39d98a, 0.6);
+        g.fillEllipse(x, y-45*s, 20, 10);
+        break;
+      case 'wealth':
+        // Coin stacks
+        for (let c=0;c<3;c++) {
+          g.fillStyle(0xF4A825, 0.8);
+          g.fillEllipse(x-20+c*20, y-15, 16, 8);
+          g.fillStyle(0xffd060, 0.6);
+          g.fillEllipse(x-20+c*20, y-18, 16, 8);
+        }
+        break;
+      case 'vault':
+        // Vault door
+        g.fillStyle(0xcd853f, 0.9);
+        g.fillCircle(x, y-20*s, 18*s);
+        g.lineStyle(2, 0xF4A825, 0.8);
+        g.strokeCircle(x, y-20*s, 18*s);
+        g.lineStyle(1, 0xF4A825, 0.5);
+        g.beginPath(); g.moveTo(x, y-20*s); g.lineTo(x+12*s, y-20*s); g.strokePath();
+        g.beginPath(); g.moveTo(x, y-20*s); g.lineTo(x, y-8*s); g.strokePath();
+        break;
+      case 'workshop':
+        // Printer shape
+        g.fillStyle(0x4a9eff, 0.6);
+        g.fillRect(x-18, y-30*s, 36, 28*s);
+        g.fillStyle(0x2d3a4a, 0.9);
+        g.fillRect(x-14, y-26*s, 28, 20*s);
+        g.fillStyle(0x4a9eff, 0.4);
+        g.fillRect(x-10, y-22*s, 20, 12*s);
+        break;
+      case 'security':
+        // Battlements
+        for (let b=-2;b<=2;b++) {
+          g.fillStyle(0x4a6eff, 0.7);
+          g.fillRect(x+b*16-5, y-35*s, 10, 25*s);
+        }
+        // Searchlight
+        g.fillStyle(0xffffff, 0.15);
+        g.fillTriangle(x, y-35*s, x-30, y-60*s, x+30, y-60*s);
+        break;
+      case 'apiary':
+        // Garden/flowers
+        const flowerColors = [0xF4A825, 0x39d98a, 0xff6b9d];
+        for (let f=0;f<4;f++) {
+          g.fillStyle(flowerColors[f%3], 0.8);
+          g.fillCircle(x-24+f*16, y-8, 6);
+        }
+        break;
+    }
+  }
+
+  drawIslandLabel(isl) {
+    const text = this.add.text(isl.x, isl.y + 70, isl.label, {
+      fontFamily: "'Barlow Condensed', sans-serif",
+      fontSize: '11px',
+      color: '#' + Phaser.Display.Color.ValueToColor(isl.accent).color.toString(16).padStart(6,'0'),
+      letterSpacing: 2,
+      alpha: 0.8
+    }).setOrigin(0.5, 0);
+  }
+
+  createBees() {
+    const beeAgents = [
+      { name:'queen',       island:'queen',    color:0xF4A825, size:10, role:'ruler' },
+      { name:'scout',       island:'research', color:0x39d98a, size:8,  role:'scout' },
+      { name:'foreman',     island:'workshop', color:0x4a9eff, size:8,  role:'worker' },
+      { name:'chancellor',  island:'vault',    color:0xcd853f, size:8,  role:'worker' },
+      { name:'supervisor',  island:'security', color:0x4a6eff, size:8,  role:'worker' },
+      { name:'nurse',       island:'apiary',   color:0xF4A825, size:7,  role:'patrol' },
+      { name:'treasurer',   island:'wealth',   color:0x9b59b6, size:7,  role:'worker' },
+    ];
+
+    beeAgents.forEach(b => {
+      const isl = this.islands.find(i => i.id === b.island);
+      const bee = this.createBeeSprite(isl.x, isl.y - 30, b.color, b.size);
+      bee.data = b;
+      bee.homeX = isl.x;
+      bee.homeY = isl.y - 30;
+      bee.phase = Math.random() * Math.PI * 2;
+      bee.speed = 0.5 + Math.random() * 0.5;
+      bee.t = Math.random();
+      bee.state = 'hover';
+      this.bees[b.name] = bee;
+    });
+
+    // Scout fly-off timer
+    this.time.addEvent({
+      delay: 12000,
+      callback: () => this.scoutFlyOff(),
+      callbackScope: this,
+      loop: true
+    });
+
+    // Nurse patrol
+    this.nurseAngle = 0;
+  }
+
+  createBeeSprite(x, y, color, size) {
+    const g = this.add.graphics();
+    // Body
+    g.fillStyle(color, 0.9);
+    g.fillEllipse(0, 0, size*2.2, size*1.4);
+    // Stripes
+    g.fillStyle(0x000000, 0.4);
+    g.fillRect(-size*0.3, -size*0.3, size*0.5, size*0.6);
+    g.fillRect(size*0.2, -size*0.3, size*0.5, size*0.6);
+    // Wings
+    g.fillStyle(0xffffff, 0.25);
+    g.fillEllipse(-size*0.4, -size*0.8, size*1.2, size*0.8);
+    g.fillEllipse(size*0.4, -size*0.8, size*1.2, size*0.8);
+    // Stinger
+    g.fillStyle(0x000000, 0.5);
+    g.fillTriangle(size*1.0, 0, size*1.6, -2, size*1.6, 2);
+
+    const container = this.add.container(x, y, [g]);
+    container.beeGraphic = g;
+
+    // Wing animation
+    this.tweens.add({
+      targets: container,
+      y: y - 4,
+      duration: 800 + Math.random()*400,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut',
+      delay: Math.random()*400
+    });
+
+    return container;
+  }
+
+  createHoneyParticles() {
+    const particles = [];
+    for (let i = 0; i < 30; i++) {
+      const g = this.add.graphics();
+      g.fillStyle(0xF4A825, 0.6);
+      g.fillCircle(0, 0, 2);
+      const isl = this.islands[Math.floor(Math.random()*this.islands.length)];
+      g.x = isl.x + Phaser.Math.Between(-60, 60);
+      g.y = isl.y + Phaser.Math.Between(-20, 20);
+      g.startY = g.y;
+      g.speed = 0.3 + Math.random()*0.5;
+      g.alpha = 0.3 + Math.random()*0.5;
+      particles.push(g);
+    }
+    return particles;
+  }
+
+  createWorkshopSmoke() {
+    const smoke = [];
+    const workshop = this.islands.find(i => i.id === 'workshop');
+    for (let i = 0; i < 8; i++) {
+      const g = this.add.graphics();
+      g.fillStyle(0x888888, 0.15);
+      g.fillCircle(0, 0, 6 + Math.random()*6);
+      g.x = workshop.x + Phaser.Math.Between(-10, 10);
+      g.y = workshop.y - 40;
+      g.startY = g.y;
+      g.speed = 0.4 + Math.random()*0.3;
+      g.offset = Math.random()*Math.PI*2;
+      smoke.push(g);
+    }
+    return smoke;
+  }
+
+  scoutFlyOff() {
+    const scout = this.bees['scout'];
+    if (!scout || scout.state === 'flying') return;
+    scout.state = 'flying';
+    const W = this.scale.width;
+
+    this.tweens.add({
+      targets: scout,
+      x: -50,
+      y: scout.y - 100,
+      duration: 3000,
+      ease: 'Sine.easeIn',
+      onComplete: () => {
+        scout.x = W + 50;
+        // Return to home
+        this.tweens.add({
+          targets: scout,
+          x: scout.homeX,
+          y: scout.homeY,
+          duration: 3000,
+          ease: 'Sine.easeOut',
+          onComplete: () => { scout.state = 'hover'; }
+        });
+      }
+    });
+  }
+
+  updateBees() {
+    // Honey particles rise
+    this.honeyParticles.forEach(p => {
+      p.y -= p.speed;
+      p.alpha -= 0.003;
+      if (p.alpha <= 0 || p.y < 0) {
+        const isl = this.islands[Math.floor(Math.random()*this.islands.length)];
+        p.x = isl.x + Phaser.Math.Between(-60, 60);
+        p.y = isl.y;
+        p.alpha = 0.4 + Math.random()*0.4;
+      }
+    });
+
+    // Smoke
+    this.workshopSmoke.forEach(s => {
+      s.y -= s.speed;
+      s.x += Math.sin(this.time.now * 0.001 + s.offset) * 0.3;
+      s.alpha -= 0.002;
+      if (s.alpha <= 0 || s.y < this.scale.height * 0.2) {
+        const workshop = this.islands.find(i => i.id === 'workshop');
+        s.x = workshop.x + Phaser.Math.Between(-10, 10);
+        s.y = workshop.y - 40;
+        s.alpha = 0.12;
+      }
+    });
+
+    // Nurse patrol
+    this.nurseAngle += 0.008;
+    const nurse = this.bees['nurse'];
+    if (nurse && nurse.state === 'hover') {
+      const cx = this.scale.width / 2;
+      const cy = this.scale.height / 2 - 20;
+      nurse.x = cx + Math.cos(this.nurseAngle) * 200;
+      nurse.y = cy + Math.sin(this.nurseAngle) * 80;
+    }
+  }
+
+  update() {
+    // Gentle island bob
+    const t = this.time.now * 0.0005;
+    this.islands.forEach((isl, i) => {
+      if (isl.graphic) {
+        isl.graphic.y = Math.sin(t + i) * 3;
+      }
+    });
+  }
+}
+
+// ══════════════════════════════════════════════════════
+// PHASER CONFIG
+// ══════════════════════════════════════════════════════
+const config = {
+  type: Phaser.AUTO,
+  width: window.innerWidth,
+  height: window.innerHeight,
+  backgroundColor: '#08080f',
+  parent: 'game-canvas',
+  scene: HiveWorld,
+  scale: {
+    mode: Phaser.Scale.RESIZE,
+    autoCenter: Phaser.Scale.CENTER_BOTH
+  }
+};
+
+const game = new Phaser.Game(config);
+
+// ══════════════════════════════════════════════════════
+// HUD DATA
+// ══════════════════════════════════════════════════════
+const AGENTS_DEF = [
+  { name:'auditor',      phase:1 },
+  { name:'bard',         phase:1 },
+  { name:'chancellor',   phase:1 },
+  { name:'engineer',     phase:1 },
+  { name:'forager',      phase:2 },
+  { name:'foreman',      phase:1 },
+  { name:'inspector',    phase:1 },
+  { name:'nurse',        phase:1 },
+  { name:'queen',        phase:1 },
+  { name:'quartermaster',phase:1 },
+  { name:'scout',        phase:1 },
+  { name:'supervisor',   phase:1 },
+  { name:'switchboard',  phase:1 },
+  { name:'treasurer',    phase:1 },
+  { name:'warden',       phase:1 },
+  { name:'worker',       phase:1 },
+];
+
+const HONEY_COLORS = {
+  tax:       '#e8403a',
+  venture:   '#4a9eff',
+  reinvest:  '#39d98a',
+  profit:    '#F4A825',
+  chancellor:'#cd853f'
+};
+
+function fmt(n) { return '$' + (n||0).toFixed(2); }
+
+function renderAgents(data) {
+  const online = data?.agents?.online || [];
+  const silent = data?.agents?.silent || [];
+  const list = document.getElementById('agent-list');
+  list.innerHTML = AGENTS_DEF.map(a => {
+    const isOnline = online.includes(a.name);
+    const isPhase2 = a.phase === 2;
+    const cls = isOnline ? 'online' : isPhase2 ? 'phase2' : 'silent';
+    const tag = isOnline ? 'ONLINE' : isPhase2 ? 'P2' : 'SILENT';
+    return `<div class="agent-row ${isOnline ? 'online' : ''}">
+      <div class="agent-dot ${cls}"></div>
+      <div class="agent-name">${a.name}</div>
+      <div class="agent-tag ${cls}">${tag}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderHoney(split) {
+  if (!split) return;
+  const total = Object.values(split).reduce((a,b)=>a+b, 0) || 1;
+  document.getElementById('honey-bars').innerHTML = Object.entries(split).map(([k,v]) => `
+    <div class="honey-row">
+      <div class="honey-label">${k}</div>
+      <div class="honey-bar-wrap">
+        <div class="honey-bar-fill" style="width:${Math.min((v/total)*100,100)}%;background:${HONEY_COLORS[k]||'#F4A825'}"></div>
+      </div>
+      <div class="honey-amt">${fmt(v)}</div>
+    </div>
+  `).join('');
+}
+
+function renderTicker(activity) {
+  if (!activity || !activity.length) return;
+  const inner = document.getElementById('ticker-inner');
+  const items = [...activity, ...activity].map(a =>
+    `<div class="ticker-item"><span class="t-agent">${a.agent}</span><span class="t-sep">//</span><span>${a.raw||a.text}</span></div>`
+  ).join('');
+  inner.innerHTML = items;
+}
+
+function applyData(d) {
+  hiveData = d;
+  const f = d.financial || {};
+  const m = d.market || {};
+  const dec = d.decree || {};
+
+  // Top bar
+  document.getElementById('agent-count').textContent = (d.agents?.online_count || 0) + ' ACTIVE';
+  document.getElementById('recovery-top').textContent = (f.recovery_pct || 0).toFixed(1) + '% RECOVERED';
+
+  // Financials
+  document.getElementById('rev-today').textContent = fmt(f.revenue_today);
+  document.getElementById('rev-mtd').textContent = fmt(f.revenue_mtd);
+  document.getElementById('net-profit').textContent = fmt(f.net_profit);
+  document.getElementById('gross-all').textContent = fmt(f.gross_all_time);
+  document.getElementById('rec-pct').textContent = (f.recovery_pct||0).toFixed(1)+'%';
+  document.getElementById('rec-fill').style.width = Math.min(f.recovery_pct||0, 100) + '%';
+
+  // Honey
+  renderHoney(f.honey_split);
+
+  // Market
+  document.getElementById('market-niche').textContent = m.niche || '—';
+  document.getElementById('vigor-num').textContent = m.vigor || '—';
+  document.getElementById('market-dir').textContent = (m.direction||'—').toUpperCase();
+  document.getElementById('market-action').textContent = (m.action||'—').replace(/_/g,' ').toUpperCase();
+  document.getElementById('market-mhr').textContent = m.mhr_target ? '$'+m.mhr_target+'/MHR' : '—';
+
+  // Decree badge
+  const badge = document.getElementById('decree-badge');
+  badge.textContent = (dec.decision||'—').toUpperCase();
+  badge.style.color = dec.decision === 'approved' ? 'var(--green)' : dec.decision === 'denied' ? 'var(--red)' : 'var(--text-dim)';
+
+  // Decree overlay (once)
+  if (!decreeShown && dec.decision === 'approved') {
+    showDecree(d);
+  }
+
+  // Agents
+  renderAgents(d);
+
+  // Ticker
+  renderTicker(d.activity);
+}
+
+function showDecree(d) {
+  const dec = d.decree || {};
+  const m = d.market || {};
+  document.getElementById('decree-niche').textContent = m.niche || '—';
+  document.getElementById('decree-worker').textContent = dec.worker || '—';
+  document.getElementById('decree-spend').textContent = fmt(dec.spend);
+  document.getElementById('decree-model').textContent = dec.model_rec || '—';
+  document.getElementById('decree-reasoning').textContent = dec.reasoning || '—';
+  document.getElementById('decree-overlay').classList.add('active');
+  decreeShown = true;
+}
+
+function closeDecree() {
+  document.getElementById('decree-overlay').classList.remove('active');
+}
+
+async function fetchData() {
+  try {
+    const res = await fetch(API + '/hive-status', { cache:'no-store' });
+    const data = await res.json();
+    applyData(data);
+  } catch(e) {
+    console.error('[HIVE]', e);
+    document.getElementById('system-status').textContent = 'CHANCELLOR OFFLINE';
+    document.getElementById('system-status').style.color = 'var(--red)';
+  }
+}
+
+// Clock
+function updateClock() {
+  const now = new Date();
+  document.getElementById('live-clock').textContent =
+    String(now.getUTCHours()).padStart(2,'0') + ':' +
+    String(now.getUTCMinutes()).padStart(2,'0') + ':' +
+    String(now.getUTCSeconds()).padStart(2,'0');
+}
+
+setInterval(updateClock, 1000);
+updateClock();
+fetchData();
+setInterval(fetchData, REFRESH);
+
+// ══════════════════════════════════════════════════════
+// QUEEN CHAT
+// ══════════════════════════════════════════════════════
+function toggleQueenChat() {
+  document.getElementById('queen-chat').classList.toggle('open');
+}
+
+async function sendQueenMsg() {
+  const input = document.getElementById('qc-input');
+  const msg = input.value.trim();
+  if (!msg) return;
+  input.value = '';
+  const msgs = document.getElementById('qc-messages');
+  msgs.innerHTML += `<div class="qc-msg user">${msg}</div>`;
+  msgs.innerHTML += `<div class="qc-msg thinking" id="qc-thinking">Queen thinking...</div>`;
+  msgs.scrollTop = msgs.scrollHeight;
+  try {
+    const res = await fetch(API + '/agent/queen/chat', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({message:msg})
+    });
+    const data = await res.json();
+    document.getElementById('qc-thinking')?.remove();
+    msgs.innerHTML += `<div class="qc-msg queen">${(data.reply||data.error||'No response').replace(/\n/g,'<br>')}</div>`;
+    msgs.scrollTop = msgs.scrollHeight;
+  } catch(e) {
+    document.getElementById('qc-thinking')?.remove();
+    msgs.innerHTML += `<div class="qc-msg queen" style="color:var(--red)">Error: ${e.message}</div>`;
+  }
+}
+
+// Resize handler
+window.addEventListener('resize', () => {
+  game.scale.resize(window.innerWidth, window.innerHeight);
+});
+</script>
+</body>
+</html>
