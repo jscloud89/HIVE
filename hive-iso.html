@@ -10,576 +10,118 @@
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
 :root {
-  --gold: #F4A825;
-  --gold-dim: #a86e10;
-  --gold-bright: #ffd060;
-  --bg: #08080f;
-  --text: #c8d0dc;
-  --text-dim: #4a5568;
-  --green: #39d98a;
-  --red: #e8403a;
-  --blue: #4a9eff;
-  --mono: 'Share Tech Mono', monospace;
-  --head: 'Cinzel Decorative', serif;
-  --vt: 'VT323', monospace;
-  --bar: 'Barlow Condensed', sans-serif;
+  --gold: #F4A825; --gold-dim: #a86e10; --gold-bright: #ffd060;
+  --bg: #08080f; --text: #c8d0dc; --text-dim: #4a5568;
+  --green: #39d98a; --red: #e8403a; --blue: #4a9eff;
+  --mono: 'Share Tech Mono', monospace; --head: 'Cinzel Decorative', serif;
+  --vt: 'VT323', monospace; --bar: 'Barlow Condensed', sans-serif;
 }
 html, body { width:100%; height:100%; background:var(--bg); overflow:hidden; }
-
-/* Scanlines */
-body::after {
-  content:'';
-  position:fixed;
-  inset:0;
-  background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.06) 2px,rgba(0,0,0,0.06) 4px);
-  pointer-events:none;
-  z-index:1000;
-}
-
+body::after { content:''; position:fixed; inset:0; background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.05) 2px,rgba(0,0,0,0.05) 4px); pointer-events:none; z-index:1000; }
 #game-canvas { position:fixed; inset:0; }
-
-/* ── HUD ── */
-#hud {
-  position:fixed;
-  inset:0;
-  pointer-events:none;
-  z-index:100;
-  font-family:var(--mono);
-}
+#hud { position:fixed; inset:0; pointer-events:none; z-index:100; font-family:var(--mono); }
 
 /* TOP BAR */
-#top-bar {
-  position:absolute;
-  top:0; left:0; right:0;
-  height:48px;
-  background:rgba(8,8,15,0.85);
-  border-bottom:1px solid rgba(244,168,37,0.3);
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  padding:0 20px;
-  backdrop-filter:blur(8px);
-}
-
-.hive-logo {
-  font-family:var(--head);
-  font-size:18px;
-  color:var(--gold);
-  letter-spacing:4px;
-  text-shadow:0 0 20px rgba(244,168,37,0.5);
-}
-
-.hive-logo span { color:var(--text-dim); font-size:11px; letter-spacing:2px; }
-
-#live-clock {
-  font-family:var(--vt);
-  font-size:28px;
-  color:var(--gold);
-  text-shadow:0 0 10px rgba(244,168,37,0.4);
-  letter-spacing:3px;
-}
-
-.top-status {
-  display:flex;
-  gap:16px;
-  align-items:center;
-  font-size:11px;
-  color:var(--text-dim);
-  letter-spacing:1px;
-}
-
-.status-dot {
-  width:6px;height:6px;border-radius:50%;
-  background:var(--green);
-  box-shadow:0 0 6px var(--green);
-  display:inline-block;
-  animation:pulse 2s ease-in-out infinite;
-}
-
+#top-bar { position:absolute; top:0; left:0; right:0; height:48px; background:rgba(8,8,15,0.88); border-bottom:1px solid rgba(244,168,37,0.3); display:flex; align-items:center; justify-content:space-between; padding:0 20px; backdrop-filter:blur(10px); }
+.hive-logo { font-family:var(--head); font-size:17px; color:var(--gold); letter-spacing:4px; text-shadow:0 0 20px rgba(244,168,37,0.5); }
+.hive-logo span { color:var(--text-dim); font-size:10px; letter-spacing:2px; }
+#live-clock { font-family:var(--vt); font-size:30px; color:var(--gold); text-shadow:0 0 12px rgba(244,168,37,0.4); letter-spacing:3px; }
+.top-status { display:flex; gap:16px; align-items:center; font-size:11px; color:var(--text-dim); letter-spacing:1px; }
+.status-dot { width:6px; height:6px; border-radius:50%; background:var(--green); box-shadow:0 0 6px var(--green); display:inline-block; animation:pulse 2s ease-in-out infinite; }
 @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
 
 /* LEFT PANEL */
-#left-panel {
-  position:absolute;
-  top:56px; left:0;
-  width:200px;
-  background:rgba(8,8,15,0.82);
-  border-right:1px solid rgba(244,168,37,0.2);
-  border-bottom:1px solid rgba(244,168,37,0.2);
-  padding:12px;
-  backdrop-filter:blur(8px);
-  pointer-events:all;
-  max-height:calc(100vh - 56px);
-  overflow-y:auto;
-}
-
-.panel-title {
-  font-family:var(--bar);
-  font-size:9px;
-  font-weight:600;
-  letter-spacing:4px;
-  color:var(--gold-dim);
-  text-transform:uppercase;
-  margin-bottom:10px;
-  border-bottom:1px solid rgba(244,168,37,0.15);
-  padding-bottom:6px;
-}
-
-.agent-row {
-  display:flex;
-  align-items:center;
-  gap:6px;
-  padding:4px 6px;
-  margin-bottom:2px;
-  border-radius:2px;
-  transition:background 0.2s;
-  cursor:default;
-}
-
+#left-panel { position:absolute; top:56px; left:0; width:188px; background:rgba(8,8,15,0.85); border-right:1px solid rgba(244,168,37,0.18); padding:10px; backdrop-filter:blur(10px); pointer-events:all; max-height:calc(100vh - 100px); overflow-y:auto; }
+.panel-title { font-family:var(--bar); font-size:9px; font-weight:600; letter-spacing:4px; color:var(--gold-dim); text-transform:uppercase; margin-bottom:8px; border-bottom:1px solid rgba(244,168,37,0.12); padding-bottom:5px; }
+.agent-row { display:flex; align-items:center; gap:6px; padding:3px 6px; margin-bottom:1px; transition:background 0.2s; }
 .agent-row:hover { background:rgba(244,168,37,0.05); }
-
-.agent-dot {
-  width:5px;height:5px;
-  border-radius:50%;
-  flex-shrink:0;
-}
+.agent-dot { width:5px; height:5px; border-radius:50%; flex-shrink:0; }
 .agent-dot.online { background:var(--green); box-shadow:0 0 5px var(--green); animation:pulse 2s ease-in-out infinite; }
 .agent-dot.silent { background:var(--text-dim); }
 .agent-dot.phase2 { background:var(--blue); }
-
-.agent-name {
-  font-size:11px;
-  color:var(--text-dim);
-  text-transform:lowercase;
-  flex:1;
-}
+.agent-name { font-size:10px; color:var(--text-dim); text-transform:lowercase; flex:1; }
 .agent-row.online .agent-name { color:var(--text); }
-
-.agent-tag {
-  font-size:8px;
-  letter-spacing:1px;
-  text-transform:uppercase;
-  padding:1px 5px;
-  border-radius:1px;
-}
+.agent-tag { font-size:8px; letter-spacing:1px; text-transform:uppercase; padding:1px 4px; }
 .agent-tag.online { color:var(--green); border:1px solid rgba(57,217,138,0.3); }
-.agent-tag.silent { color:var(--text-dim); border:1px solid rgba(90,100,120,0.3); }
+.agent-tag.silent { color:var(--text-dim); border:1px solid rgba(90,100,120,0.2); }
 .agent-tag.phase2 { color:var(--blue); border:1px solid rgba(74,158,255,0.3); }
 
 /* RIGHT PANEL */
-#right-panel {
-  position:absolute;
-  top:56px; right:0;
-  width:220px;
-  background:rgba(8,8,15,0.82);
-  border-left:1px solid rgba(244,168,37,0.2);
-  border-bottom:1px solid rgba(244,168,37,0.2);
-  padding:12px;
-  backdrop-filter:blur(8px);
-  pointer-events:all;
-}
-
-.fin-row {
-  display:flex;
-  justify-content:space-between;
-  align-items:baseline;
-  margin-bottom:8px;
-}
+#right-panel { position:absolute; top:56px; right:0; width:208px; background:rgba(8,8,15,0.85); border-left:1px solid rgba(244,168,37,0.18); padding:12px; backdrop-filter:blur(10px); pointer-events:all; }
+.fin-row { display:flex; justify-content:space-between; align-items:baseline; margin-bottom:10px; }
 .fin-label { font-size:9px; color:var(--text-dim); letter-spacing:2px; text-transform:uppercase; }
-.fin-val { font-family:var(--vt); font-size:22px; color:var(--gold); line-height:1; }
+.fin-val { font-family:var(--vt); font-size:24px; color:var(--gold); line-height:1; }
 .fin-val.green { color:var(--green); }
-
-/* Recovery bar */
-.recovery-wrap {
-  margin:12px 0 8px;
-}
-.recovery-label {
-  display:flex;
-  justify-content:space-between;
-  font-size:9px;
-  color:var(--text-dim);
-  letter-spacing:1px;
-  margin-bottom:4px;
-  text-transform:uppercase;
-}
-.recovery-bar {
-  height:5px;
-  background:rgba(244,168,37,0.1);
-  border:1px solid rgba(244,168,37,0.2);
-  overflow:hidden;
-}
-.recovery-fill {
-  height:100%;
-  background:linear-gradient(90deg, var(--gold-dim), var(--gold));
-  transition:width 2s ease;
-}
-
-/* Honey split */
-.honey-bars { margin-top:10px; }
-.honey-row {
-  display:flex;
-  align-items:center;
-  gap:6px;
-  margin-bottom:5px;
-}
-.honey-label { font-size:9px; color:var(--text-dim); width:70px; text-transform:uppercase; letter-spacing:1px; }
-.honey-bar-wrap { flex:1; height:4px; background:rgba(255,255,255,0.05); border-radius:2px; overflow:hidden; }
+.recovery-wrap { margin:10px 0 8px; }
+.recovery-label { display:flex; justify-content:space-between; font-size:9px; color:var(--text-dim); letter-spacing:1px; margin-bottom:4px; text-transform:uppercase; }
+.recovery-bar { height:5px; background:rgba(244,168,37,0.08); border:1px solid rgba(244,168,37,0.18); overflow:hidden; }
+.recovery-fill { height:100%; background:linear-gradient(90deg, var(--gold-dim), var(--gold)); transition:width 2s ease; }
+.honey-row { display:flex; align-items:center; gap:6px; margin-bottom:5px; }
+.honey-label { font-size:9px; color:var(--text-dim); width:68px; text-transform:uppercase; letter-spacing:1px; }
+.honey-bar-wrap { flex:1; height:4px; background:rgba(255,255,255,0.04); border-radius:2px; overflow:hidden; }
 .honey-bar-fill { height:100%; border-radius:2px; transition:width 1s ease; }
 .honey-amt { font-family:var(--vt); font-size:14px; color:var(--gold); width:36px; text-align:right; }
 
-/* BOTTOM TICKER */
-#bottom-bar {
-  position:absolute;
-  bottom:0; left:0; right:0;
-  height:36px;
-  background:rgba(8,8,15,0.85);
-  border-top:1px solid rgba(244,168,37,0.2);
-  display:flex;
-  align-items:center;
-  overflow:hidden;
-  backdrop-filter:blur(8px);
-}
+/* BOTTOM */
+#bottom-bar { position:absolute; bottom:0; left:0; right:0; height:34px; background:rgba(8,8,15,0.88); border-top:1px solid rgba(244,168,37,0.18); display:flex; align-items:center; overflow:hidden; backdrop-filter:blur(10px); }
+.ticker-label { font-family:var(--bar); font-size:9px; font-weight:700; letter-spacing:3px; color:var(--gold); padding:0 12px; white-space:nowrap; border-right:1px solid rgba(244,168,37,0.18); height:100%; display:flex; align-items:center; }
+.ticker-track { flex:1; overflow:hidden; height:100%; display:flex; align-items:center; }
+.ticker-inner { display:flex; gap:40px; animation:ticker 50s linear infinite; white-space:nowrap; }
+@keyframes ticker { 0%{transform:translateX(0)} 100%{transform:translateX(-50%)} }
+.ticker-item { font-size:11px; color:var(--text-dim); display:flex; align-items:center; gap:8px; }
+.t-agent { color:var(--gold); text-transform:uppercase; font-size:10px; }
 
-.ticker-label {
-  font-family:var(--bar);
-  font-size:9px;
-  font-weight:700;
-  letter-spacing:3px;
-  color:var(--gold);
-  padding:0 12px;
-  white-space:nowrap;
-  border-right:1px solid rgba(244,168,37,0.2);
-  height:100%;
-  display:flex;
-  align-items:center;
-}
-
-.ticker-track {
-  flex:1;
-  overflow:hidden;
-  height:100%;
-  display:flex;
-  align-items:center;
-}
-
-.ticker-inner {
-  display:flex;
-  gap:40px;
-  animation:ticker 40s linear infinite;
-  white-space:nowrap;
-}
-
-@keyframes ticker {
-  0% { transform:translateX(0); }
-  100% { transform:translateX(-50%); }
-}
-
-.ticker-item {
-  font-size:11px;
-  color:var(--text-dim);
-  display:flex;
-  align-items:center;
-  gap:8px;
-}
-
-.ticker-item .t-agent { color:var(--gold); text-transform:uppercase; font-size:10px; }
-.ticker-item .t-sep { color:var(--text-dim); opacity:0.4; }
-
-/* MARKET SIGNAL */
-#market-panel {
-  position:absolute;
-  bottom:44px;
-  left:50%;
-  transform:translateX(-50%);
-  background:rgba(8,8,15,0.88);
-  border:1px solid rgba(244,168,37,0.3);
-  padding:10px 20px;
-  display:flex;
-  align-items:center;
-  gap:16px;
-  backdrop-filter:blur(8px);
-  pointer-events:all;
-  min-width:500px;
-}
-
-.market-niche {
-  font-family:var(--bar);
-  font-size:13px;
-  font-weight:600;
-  color:var(--text);
-  flex:1;
-  letter-spacing:0.5px;
-}
-
-.vigor-display {
-  font-family:var(--vt);
-  font-size:32px;
-  color:var(--gold-bright);
-  text-shadow:0 0 15px rgba(244,168,37,0.4);
-  line-height:1;
-}
-
+/* MARKET */
+#market-panel { position:absolute; bottom:42px; left:50%; transform:translateX(-50%); background:rgba(8,8,15,0.9); border:1px solid rgba(244,168,37,0.28); padding:10px 20px; display:flex; align-items:center; gap:20px; backdrop-filter:blur(10px); pointer-events:all; min-width:460px; }
+.market-niche { font-family:var(--bar); font-size:13px; font-weight:600; color:var(--text); flex:1; letter-spacing:0.5px; }
+.vigor-display { font-family:var(--vt); font-size:34px; color:var(--gold-bright); text-shadow:0 0 15px rgba(244,168,37,0.4); line-height:1; }
 .vigor-label { font-size:9px; color:var(--text-dim); letter-spacing:2px; text-align:center; text-transform:uppercase; }
-
-.market-tag {
-  font-size:9px;
-  letter-spacing:2px;
-  padding:3px 8px;
-  border:1px solid rgba(244,168,37,0.4);
-  color:var(--gold);
-  text-transform:uppercase;
-}
+.market-tag { font-size:9px; letter-spacing:2px; padding:3px 8px; border:1px solid rgba(244,168,37,0.35); color:var(--gold); text-transform:uppercase; }
 .market-tag.green { border-color:rgba(57,217,138,0.4); color:var(--green); }
 
-/* ── ROYAL DECREE OVERLAY ── */
-#decree-overlay {
-  position:fixed;
-  inset:0;
-  background:rgba(0,0,0,0);
-  z-index:500;
-  display:flex;
-  align-items:flex-start;
-  justify-content:center;
-  padding-top:60px;
-  pointer-events:none;
-  transition:background 0.5s;
-}
+/* TOOLTIP */
+#island-tooltip { position:absolute; display:none; background:rgba(8,8,15,0.96); border:1px solid rgba(244,168,37,0.4); padding:10px 14px; pointer-events:none; min-width:150px; }
+.tt-name { font-family:var(--bar); font-size:12px; font-weight:700; letter-spacing:2px; color:var(--gold); margin-bottom:6px; }
+.tt-agents { font-size:10px; color:var(--text-dim); line-height:1.6; white-space:pre-line; }
 
-#decree-overlay.active {
-  background:rgba(0,0,0,0.6);
-  pointer-events:all;
-}
-
-#decree-panel {
-  background:linear-gradient(135deg, #0d0d1a, #1a1000);
-  border:2px solid var(--gold);
-  padding:28px 36px;
-  max-width:500px;
-  width:90%;
-  transform:translateY(-120%);
-  transition:transform 0.6s cubic-bezier(0.175,0.885,0.32,1.275);
-  box-shadow:0 0 60px rgba(244,168,37,0.3), inset 0 0 40px rgba(244,168,37,0.05);
-  text-align:center;
-  pointer-events:all;
-}
-
-#decree-overlay.active #decree-panel {
-  transform:translateY(0);
-}
-
-.decree-crown {
-  font-size:40px;
-  animation:crownPulse 1.5s ease-in-out infinite;
-  display:block;
-  margin-bottom:8px;
-}
-
-@keyframes crownPulse {
-  0%,100% { filter:drop-shadow(0 0 8px rgba(244,168,37,0.8)); transform:scale(1); }
-  50% { filter:drop-shadow(0 0 20px rgba(244,168,37,1)); transform:scale(1.08); }
-}
-
-.decree-title {
-  font-family:var(--head);
-  font-size:14px;
-  letter-spacing:6px;
-  color:var(--gold);
-  margin-bottom:16px;
-  text-shadow:0 0 15px rgba(244,168,37,0.5);
-}
-
-.decree-content {
-  font-family:var(--mono);
-  font-size:12px;
-  color:var(--text);
-  line-height:1.7;
-  margin-bottom:20px;
-  text-align:left;
-  background:rgba(244,168,37,0.04);
-  border:1px solid rgba(244,168,37,0.15);
-  padding:12px 16px;
-}
-
-.decree-reasoning {
-  font-size:11px;
-  color:var(--text-dim);
-  font-style:italic;
-  line-height:1.6;
-  margin-bottom:20px;
-  text-align:left;
-}
-
-.decree-btns {
-  display:flex;
-  gap:12px;
-  justify-content:center;
-}
-
-.decree-btn {
-  font-family:var(--head);
-  font-size:11px;
-  letter-spacing:3px;
-  padding:10px 28px;
-  border:none;
-  cursor:pointer;
-  transition:all 0.2s;
-}
-
-.decree-btn.approve {
-  background:rgba(57,217,138,0.15);
-  border:1px solid var(--green);
-  color:var(--green);
-}
-
-.decree-btn.approve:hover {
-  background:var(--green);
-  color:var(--bg);
-}
-
-.decree-btn.deny {
-  background:rgba(232,64,58,0.15);
-  border:1px solid var(--red);
-  color:var(--red);
-}
-
-.decree-btn.deny:hover {
-  background:var(--red);
-  color:var(--bg);
-}
+/* DECREE */
+#decree-overlay { position:fixed; inset:0; background:rgba(0,0,0,0); z-index:500; display:flex; align-items:flex-start; justify-content:center; padding-top:56px; pointer-events:none; transition:background 0.5s; }
+#decree-overlay.active { background:rgba(0,0,0,0.65); pointer-events:all; }
+#decree-panel { background:linear-gradient(135deg,#0d0d1a,#1a1000); border:2px solid var(--gold); padding:28px 36px; max-width:480px; width:90%; transform:translateY(-120%); transition:transform 0.6s cubic-bezier(0.175,0.885,0.32,1.275); box-shadow:0 0 60px rgba(244,168,37,0.25); text-align:center; pointer-events:all; }
+#decree-overlay.active #decree-panel { transform:translateY(0); }
+.decree-crown { font-size:40px; animation:crownPulse 1.5s ease-in-out infinite; display:block; margin-bottom:8px; }
+@keyframes crownPulse { 0%,100%{filter:drop-shadow(0 0 8px rgba(244,168,37,0.8));transform:scale(1)} 50%{filter:drop-shadow(0 0 22px rgba(244,168,37,1));transform:scale(1.08)} }
+.decree-title { font-family:var(--head); font-size:13px; letter-spacing:6px; color:var(--gold); margin-bottom:16px; }
+.decree-content { font-family:var(--mono); font-size:11px; color:var(--text); line-height:1.8; margin-bottom:14px; text-align:left; background:rgba(244,168,37,0.04); border:1px solid rgba(244,168,37,0.12); padding:12px 16px; }
+.decree-reasoning { font-size:11px; color:var(--text-dim); font-style:italic; line-height:1.6; margin-bottom:18px; text-align:left; }
+.decree-btns { display:flex; gap:12px; justify-content:center; }
+.decree-btn { font-family:var(--head); font-size:10px; letter-spacing:3px; padding:10px 28px; border:none; cursor:pointer; transition:all 0.2s; pointer-events:all; }
+.decree-btn.approve { background:rgba(57,217,138,0.12); border:1px solid var(--green); color:var(--green); }
+.decree-btn.approve:hover { background:var(--green); color:var(--bg); }
+.decree-btn.deny { background:rgba(232,64,58,0.12); border:1px solid var(--red); color:var(--red); }
+.decree-btn.deny:hover { background:var(--red); color:var(--bg); }
 
 /* QUEEN CHAT */
-#queen-chat {
-  position:fixed;
-  bottom:36px;
-  right:0;
-  width:220px;
-  background:rgba(8,8,15,0.92);
-  border-top:1px solid rgba(244,168,37,0.3);
-  border-left:1px solid rgba(244,168,37,0.2);
-  z-index:200;
-  pointer-events:all;
-  transform:translateY(100%);
-  transition:transform 0.3s ease;
-}
-
+#queen-chat { position:fixed; bottom:34px; right:0; width:208px; background:rgba(8,8,15,0.94); border-top:1px solid rgba(244,168,37,0.28); border-left:1px solid rgba(244,168,37,0.18); z-index:200; pointer-events:all; transform:translateY(100%); transition:transform 0.3s ease; }
 #queen-chat.open { transform:translateY(0); }
-
-.qc-header {
-  padding:8px 12px;
-  border-bottom:1px solid rgba(244,168,37,0.2);
-  cursor:pointer;
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-}
-
-.qc-title {
-  font-family:var(--bar);
-  font-size:9px;
-  font-weight:700;
-  letter-spacing:3px;
-  color:var(--gold);
-  text-transform:uppercase;
-}
-
-.qc-messages {
-  height:180px;
-  overflow-y:auto;
-  padding:10px;
-  display:flex;
-  flex-direction:column;
-  gap:6px;
-}
-
-.qc-msg {
-  font-size:11px;
-  line-height:1.5;
-  padding:6px 8px;
-  max-width:95%;
-}
-
-.qc-msg.user {
-  background:rgba(244,168,37,0.08);
-  border:1px solid rgba(244,168,37,0.2);
-  color:var(--text);
-  align-self:flex-end;
-  font-family:var(--mono);
-}
-
-.qc-msg.queen {
-  background:rgba(255,255,255,0.04);
-  border:1px solid rgba(255,255,255,0.08);
-  color:var(--text);
-  align-self:flex-start;
-}
-
-.qc-msg.thinking {
-  color:var(--text-dim);
-  font-size:10px;
-  animation:pulse 1s step-end infinite;
-}
-
-.qc-input-row {
-  display:flex;
-  border-top:1px solid rgba(244,168,37,0.15);
-}
-
-.qc-input {
-  flex:1;
-  background:transparent;
-  border:none;
-  color:var(--text);
-  font-family:var(--mono);
-  font-size:11px;
-  padding:8px 10px;
-  outline:none;
-}
-
-.qc-send {
-  background:transparent;
-  border:none;
-  border-left:1px solid rgba(244,168,37,0.2);
-  color:var(--gold);
-  font-family:var(--mono);
-  font-size:11px;
-  padding:8px 10px;
-  cursor:pointer;
-  transition:background 0.2s;
-}
-
+.qc-header { padding:8px 12px; border-bottom:1px solid rgba(244,168,37,0.18); cursor:pointer; display:flex; justify-content:space-between; align-items:center; }
+.qc-title { font-family:var(--bar); font-size:9px; font-weight:700; letter-spacing:3px; color:var(--gold); text-transform:uppercase; }
+.qc-messages { height:200px; overflow-y:auto; padding:10px; display:flex; flex-direction:column; gap:6px; }
+.qc-msg { font-size:11px; line-height:1.5; padding:6px 8px; max-width:96%; }
+.qc-msg.user { background:rgba(244,168,37,0.08); border:1px solid rgba(244,168,37,0.2); color:var(--text); align-self:flex-end; font-family:var(--mono); }
+.qc-msg.queen { background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.07); color:var(--text); align-self:flex-start; }
+.qc-msg.thinking { color:var(--text-dim); font-size:10px; animation:pulse 1s step-end infinite; }
+.qc-input-row { display:flex; border-top:1px solid rgba(244,168,37,0.12); }
+.qc-input { flex:1; background:transparent; border:none; color:var(--text); font-family:var(--mono); font-size:11px; padding:8px 10px; outline:none; }
+.qc-send { background:transparent; border:none; border-left:1px solid rgba(244,168,37,0.18); color:var(--gold); font-family:var(--mono); font-size:13px; padding:8px 10px; cursor:pointer; transition:background 0.2s; }
 .qc-send:hover { background:rgba(244,168,37,0.1); }
-
-#queen-toggle {
-  position:fixed;
-  bottom:44px;
-  right:220px;
-  background:rgba(8,8,15,0.9);
-  border:1px solid rgba(244,168,37,0.4);
-  border-right:none;
-  color:var(--gold);
-  font-family:var(--mono);
-  font-size:10px;
-  letter-spacing:2px;
-  padding:6px 12px;
-  cursor:pointer;
-  z-index:201;
-  pointer-events:all;
-  transition:all 0.2s;
-  writing-mode:vertical-rl;
-  text-orientation:mixed;
-  transform:rotate(180deg);
-}
-
+#queen-toggle { position:fixed; bottom:42px; right:208px; background:rgba(8,8,15,0.9); border:1px solid rgba(244,168,37,0.35); border-right:none; color:var(--gold); font-family:var(--mono); font-size:10px; letter-spacing:2px; padding:6px 10px; cursor:pointer; z-index:201; pointer-events:all; transition:all 0.2s; writing-mode:vertical-rl; text-orientation:mixed; transform:rotate(180deg); }
 #queen-toggle:hover { background:rgba(244,168,37,0.1); }
 </style>
 </head>
 <body>
 <div id="game-canvas"></div>
-
-<!-- HUD -->
 <div id="hud">
-
-  <!-- TOP BAR -->
   <div id="top-bar">
     <div class="hive-logo">THE HIVE <span>// COMMAND WORLD</span></div>
     <div id="live-clock">00:00:00</div>
@@ -592,56 +134,31 @@ body::after {
       <span id="recovery-top">1.5% RECOVERED</span>
     </div>
   </div>
-
-  <!-- LEFT PANEL — AGENTS -->
   <div id="left-panel">
     <div class="panel-title">⬡ Agents</div>
     <div id="agent-list"></div>
   </div>
-
-  <!-- RIGHT PANEL — FINANCIALS -->
   <div id="right-panel">
     <div class="panel-title">⬡ Chancellor Ledger</div>
     <div class="fin-row">
-      <div>
-        <div class="fin-label">Today</div>
-        <div class="fin-val" id="rev-today">$0.00</div>
-      </div>
-      <div style="text-align:right">
-        <div class="fin-label">MTD</div>
-        <div class="fin-val" id="rev-mtd">$0.00</div>
-      </div>
+      <div><div class="fin-label">Today</div><div class="fin-val" id="rev-today">$0.00</div></div>
+      <div style="text-align:right"><div class="fin-label">MTD</div><div class="fin-val" id="rev-mtd">$0.00</div></div>
     </div>
     <div class="fin-row">
-      <div>
-        <div class="fin-label">Net Profit</div>
-        <div class="fin-val green" id="net-profit">$0.00</div>
-      </div>
-      <div style="text-align:right">
-        <div class="fin-label">All-Time</div>
-        <div class="fin-val" id="gross-all">$0.00</div>
-      </div>
+      <div><div class="fin-label">Net Profit</div><div class="fin-val green" id="net-profit">$0.00</div></div>
+      <div style="text-align:right"><div class="fin-label">All-Time</div><div class="fin-val" id="gross-all">$0.00</div></div>
     </div>
-
     <div class="recovery-wrap">
-      <div class="recovery-label">
-        <span>Recovery</span>
-        <span id="rec-pct">0%</span>
-      </div>
-      <div class="recovery-bar">
-        <div class="recovery-fill" id="rec-fill" style="width:0%"></div>
-      </div>
+      <div class="recovery-label"><span>Recovery</span><span id="rec-pct">0%</span></div>
+      <div class="recovery-bar"><div class="recovery-fill" id="rec-fill" style="width:0%"></div></div>
     </div>
-
     <div class="panel-title" style="margin-top:12px">⬡ Honey Split</div>
-    <div class="honey-bars" id="honey-bars"></div>
+    <div id="honey-bars"></div>
   </div>
-
-  <!-- MARKET PANEL -->
   <div id="market-panel">
     <div>
       <div style="font-size:9px;color:var(--text-dim);letter-spacing:3px;text-transform:uppercase;margin-bottom:4px">Market Signal</div>
-      <div class="market-niche" id="market-niche">Scanning niches...</div>
+      <div class="market-niche" id="market-niche">Scanning...</div>
       <div style="display:flex;gap:8px;margin-top:6px">
         <div class="market-tag" id="market-dir">—</div>
         <div class="market-tag" id="market-action">—</div>
@@ -654,28 +171,23 @@ body::after {
     </div>
     <div style="text-align:center">
       <div style="font-size:9px;color:var(--text-dim);letter-spacing:2px;text-transform:uppercase;margin-bottom:4px">Decree</div>
-      <div id="decree-badge" style="font-family:var(--bar);font-size:13px;font-weight:700;letter-spacing:3px;color:var(--green)">—</div>
+      <div id="decree-badge" style="font-family:var(--bar);font-size:14px;font-weight:700;letter-spacing:3px;color:var(--green)">—</div>
     </div>
   </div>
-
-  <!-- BOTTOM TICKER -->
   <div id="bottom-bar">
     <div class="ticker-label">⬡ ACTIVITY</div>
-    <div class="ticker-track">
-      <div class="ticker-inner" id="ticker-inner">
-        <div class="ticker-item"><span class="t-agent">HIVE</span><span class="t-sep">//</span><span>Loading activity feed...</span></div>
-      </div>
-    </div>
+    <div class="ticker-track"><div class="ticker-inner" id="ticker-inner">
+      <div class="ticker-item"><span class="t-agent">HIVE</span><span style="opacity:0.3">//</span><span>Loading...</span></div>
+    </div></div>
   </div>
-
+  <div id="island-tooltip"><div class="tt-name" id="tt-name">—</div><div class="tt-agents" id="tt-agents">—</div></div>
 </div>
 
-<!-- ROYAL DECREE OVERLAY -->
 <div id="decree-overlay">
   <div id="decree-panel">
     <span class="decree-crown">👑</span>
     <div class="decree-title">Royal Decree</div>
-    <div class="decree-content" id="decree-content">
+    <div class="decree-content">
       <div>NICHE: <span id="decree-niche">—</span></div>
       <div>WORKER: <span id="decree-worker">—</span></div>
       <div>BUDGET: <span id="decree-spend">—</span></div>
@@ -689,11 +201,10 @@ body::after {
   </div>
 </div>
 
-<!-- QUEEN CHAT -->
 <button id="queen-toggle" onclick="toggleQueenChat()">⬡ QUEEN</button>
 <div id="queen-chat">
   <div class="qc-header" onclick="toggleQueenChat()">
-    <span class="qc-title">⬡ Queen — Direct Channel</span>
+    <span class="qc-title">⬡ Queen — Direct</span>
     <span style="font-size:10px;color:var(--text-dim)">▼</span>
   </div>
   <div class="qc-messages" id="qc-messages">
@@ -706,634 +217,330 @@ body::after {
 </div>
 
 <script>
-// ══════════════════════════════════════════════════════
-// CONFIG
-// ══════════════════════════════════════════════════════
 const API = 'http://192.168.50.10:8001';
+const ASSETS_URL = 'http://192.168.50.10:8080/assets';
 const REFRESH = 30000;
-let hiveData = null;
 let decreeShown = false;
 
-// ══════════════════════════════════════════════════════
-// PHASER SCENE
-// ══════════════════════════════════════════════════════
 class HiveWorld extends Phaser.Scene {
   constructor() { super('HiveWorld'); }
 
   preload() {
-    // Generate all graphics procedurally — no external assets
+    this.load.image('bee-queen',   ASSETS_URL+'/bee-queen.png');
+    this.load.image('bee-scout',   ASSETS_URL+'/bee-scout.png');
+    this.load.image('bee-foreman', ASSETS_URL+'/bee-foreman.png');
+    this.load.image('printer',     ASSETS_URL+'/printer-a1mini.png');
+    this.load.image('vault',       ASSETS_URL+'/vault-door.png');
+    this.load.image('coins',       ASSETS_URL+'/coin-stack.png');
+    this.load.image('filament',    ASSETS_URL+'/filament-spool.png');
+    this.load.image('desk',        ASSETS_URL+'/desk-computer.png');
   }
 
   create() {
-    const W = this.scale.width;
-    const H = this.scale.height;
+    const W = this.scale.width, H = this.scale.height;
+    const cx = W/2, cy = H/2 - 10;
 
-    // Starfield background
     this.createStarfield(W, H);
 
-    // Island definitions — isometric world center
-    const cx = W / 2;
-    const cy = H / 2 - 20;
-
-    this.islands = [
-      { id:'queen',    label:"Queen's Court",    x:cx,      y:cy-140,  color:0xF4A825, accent:0xffd060, agents:['queen'],                    size:1.3 },
-      { id:'research', label:'Research Station',  x:cx-280,  y:cy-60,   color:0x2d7a4a, accent:0x39d98a, agents:['scout','bard'],             size:1.0 },
-      { id:'wealth',   label:'Wealth Garden',     x:cx+280,  y:cy-60,   color:0x4a2d7a, accent:0x9b59b6, agents:['forager','treasurer'],      size:1.0 },
-      { id:'vault',    label:'The Vault',         x:cx,      y:cy+60,   color:0x7a5a2d, accent:0xcd853f, agents:['chancellor'],               size:1.1 },
-      { id:'workshop', label:'The Workshop',      x:cx-240,  y:cy+140,  color:0x2d3a4a, accent:0x4a9eff, agents:['foreman','engineer'],       size:1.0 },
-      { id:'security', label:'Security Fortress', x:cx+240,  y:cy+140,  color:0x1a2a3a, accent:0x4a6eff, agents:['supervisor','warden'],      size:1.0 },
-      { id:'apiary',   label:'The Apiary',        x:cx,      y:cy+240,  color:0x5a3a10, accent:0xF4A825, agents:['nurse','quartermaster'],    size:1.0 },
+    this.islandDefs = [
+      {id:'queen',    label:"Queen's Court",   x:cx,     y:cy-150, color:0xc8860a, accent:0xF4A825, lite:0xffd060, bee:'bee-queen',   prop:null,      scale:0.13, beeX:-35, beeY:-65, agents:['queen'],                desc:"Strategic HQ\nRoyal Decrees issued here"},
+      {id:'research', label:'Research Station',x:cx-270, y:cy-55,  color:0x1a5c33, accent:0x39d98a, lite:0x7fffc4, bee:'bee-scout',   prop:'desk',    scale:0.11, beeX:-30, beeY:-60, agents:['scout','bard'],         desc:"Market research\nScout waggle dances"},
+      {id:'wealth',   label:'Wealth Garden',   x:cx+270, y:cy-55,  color:0x3a1a6a, accent:0x9b59b6, lite:0xd7a0ff, bee:null,          prop:'coins',   scale:0.11, beeX:0,   beeY:0,   agents:['forager','treasurer'],  desc:"Revenue tracking\nTreasurer verdicts"},
+      {id:'vault',    label:'The Vault',        x:cx,     y:cy+60,  color:0x6a4010, accent:0xcd853f, lite:0xffb347, bee:null,          prop:'vault',   scale:0.13, beeX:0,   beeY:0,   agents:['chancellor'],           desc:"Financial records\nHoney split ledger"},
+      {id:'workshop', label:'The Workshop',     x:cx-230, y:cy+148, color:0x1a2a3a, accent:0x4a9eff, lite:0x87ceeb, bee:'bee-foreman', prop:'printer', scale:0.11, beeX:-30, beeY:-58, agents:['foreman','engineer'],   desc:"A1 Mini printing\nActive production"},
+      {id:'security', label:'Security',         x:cx+230, y:cy+148, color:0x0f1a2a, accent:0x4a6eff, lite:0x8899ff, bee:null,          prop:'filament',scale:0.11, beeX:0,   beeY:0,   agents:['supervisor','warden'],  desc:"Code audit\nSecurity monitoring"},
+      {id:'apiary',   label:'The Apiary',       x:cx,     y:cy+248, color:0x4a2a08, accent:0xF4A825, lite:0xffd060, bee:null,          prop:'desk',    scale:0.10, beeX:0,   beeY:0,   agents:['nurse','quartermaster'],desc:"Storage mgmt\nMorning briefings"},
     ];
 
-    // Draw connection lines
     this.drawConnections();
+    this.islandDefs.forEach(isl => this.buildIsland(isl));
+    this.honeyMotes = this.createMotes();
+    this.smoke = this.createSmoke();
 
-    // Draw islands
-    this.islandGraphics = [];
-    this.islands.forEach(isl => this.drawIsland(isl));
+    this.input.on('pointermove', ptr => {
+      const tt = document.getElementById('island-tooltip');
+      tt.style.left = (ptr.x+16)+'px';
+      tt.style.top = (ptr.y-10)+'px';
+    });
 
-    // Honey particle system
-    this.honeyParticles = this.createHoneyParticles();
-
-    // Bee sprites
-    this.bees = {};
-    this.createBees();
-
-    // Workshop smoke
-    this.workshopSmoke = this.createWorkshopSmoke();
-
-    // Floating labels
-    this.islands.forEach(isl => this.drawIslandLabel(isl));
-
-    // Gentle camera bob
-    this.cameras.main.setBackgroundColor(0x08080f);
-
-    // Update loop
-    this.time.addEvent({ delay:100, callback:this.updateBees, callbackScope:this, loop:true });
+    this.nurseAngle = 0;
+    this.time.addEvent({delay:80, callback:this.tick, callbackScope:this, loop:true});
+    this.time.addEvent({delay:14000, callback:this.scoutFlyOff, callbackScope:this, loop:true});
   }
 
   createStarfield(W, H) {
-    const stars = this.add.graphics();
-    for (let i = 0; i < 200; i++) {
-      const x = Phaser.Math.Between(0, W);
-      const y = Phaser.Math.Between(0, H);
-      const r = Math.random() * 1.5;
-      const a = Math.random() * 0.6 + 0.1;
-      stars.fillStyle(0xffffff, a);
-      stars.fillCircle(x, y, r);
+    const g = this.add.graphics();
+    for (let i=0;i<200;i++) {
+      g.fillStyle(0xffffff, Math.random()*0.5+0.05);
+      g.fillCircle(Math.random()*W, Math.random()*H, Math.random()*1.3);
     }
-    // Subtle nebula glow
-    const nebula = this.add.graphics();
-    nebula.fillStyle(0xF4A825, 0.02);
-    nebula.fillEllipse(W/2, H/2, W*0.8, H*0.5);
+    g.fillStyle(0xF4A825, 0.015);
+    g.fillEllipse(W/2, H/2, W*0.85, H*0.55);
   }
 
   drawConnections() {
     const g = this.add.graphics();
-    g.lineStyle(1, 0xF4A825, 0.12);
-    const queen = this.islands[0];
-    this.islands.slice(1).forEach(isl => {
-      g.beginPath();
-      g.moveTo(queen.x, queen.y);
-      g.lineTo(isl.x, isl.y);
-      g.strokePath();
+    const q = this.islandDefs[0];
+    this.islandDefs.slice(1).forEach(isl => {
+      g.lineStyle(1, 0xF4A825, 0.1);
+      g.beginPath(); g.moveTo(q.x, q.y); g.lineTo(isl.x, isl.y); g.strokePath();
     });
   }
 
-  drawIsland(isl) {
+  hexPts(cx, cy, r, ys=0.48) {
+    return Array.from({length:6}, (_,i) => {
+      const a = (Math.PI/3)*i - Math.PI/6;
+      return {x: cx+Math.cos(a)*r, y: cy+Math.sin(a)*r*ys};
+    });
+  }
+
+  darken(c, f) {
+    return (Math.floor(((c>>16)&0xff)*f)<<16)|(Math.floor(((c>>8)&0xff)*f)<<8)|Math.floor((c&0xff)*f);
+  }
+
+  buildIsland(isl) {
+    const c = this.add.container(isl.x, isl.y);
     const g = this.add.graphics();
-    const s = isl.size;
-    const x = isl.x, y = isl.y;
+    const r = 70, h = 26;
+    const hex = this.hexPts(0, 0, r);
 
     // Shadow
-    g.fillStyle(0x000000, 0.3);
-    g.fillEllipse(x, y + 55*s, 160*s, 30*s);
+    g.fillStyle(0x000000, 0.22);
+    g.fillEllipse(0, 70, 160, 26);
 
-    // Isometric box — bottom face
-    g.fillStyle(isl.color, 0.6);
-    const bw = 80*s, bh = 40*s, bd = 22*s;
-    g.fillRect(x - bw, y + bd, bw*2, bh);
+    // Side faces
+    g.fillStyle(this.darken(isl.color, 0.52), 1);
+    g.fillPoints([hex[3],hex[4],{x:hex[4].x,y:hex[4].y+h},{x:hex[3].x,y:hex[3].y+h}], true);
+    g.fillStyle(this.darken(isl.color, 0.68), 1);
+    g.fillPoints([hex[4],hex[5],{x:hex[5].x,y:hex[5].y+h},{x:hex[4].x,y:hex[4].y+h}], true);
+    g.fillStyle(this.darken(isl.color, 0.60), 1);
+    g.fillPoints([hex[5],hex[0],{x:hex[0].x,y:hex[0].y+h},{x:hex[5].x,y:hex[5].y+h}], true);
 
-    // Left face (darker)
-    g.fillStyle(Phaser.Display.Color.ValueToColor(isl.color).darken(30).color, 0.85);
-    g.fillPoints([
-      {x: x - bw, y: y + bd},
-      {x: x - bw, y: y + bd + bh},
-      {x: x - bw, y: y + bd + bh + bd},
-      {x: x - bw + bw, y: y + bd + bh},
-      {x: x - bw + bw, y: y + bd},
-      {x: x - bw, y: y + bd - bd}
-    ], true);
-
-    // Top face (hexagonal platform)
-    const hw = 80*s;
-    g.fillStyle(isl.accent, 0.2);
-    g.fillStyle(isl.color, 0.9);
-
-    // Draw hex top
-    const hex = [];
-    for (let i = 0; i < 6; i++) {
-      const angle = (Math.PI / 3) * i - Math.PI/6;
-      hex.push({ x: x + Math.cos(angle) * hw, y: y + Math.sin(angle) * hw * 0.5 });
-    }
+    // Top face
+    g.fillStyle(isl.color, 1);
     g.fillPoints(hex, true);
 
     // Hex outline
-    g.lineStyle(1.5, isl.accent, 0.7);
+    g.lineStyle(1.5, isl.accent, 0.65);
     g.strokePoints(hex, true);
 
-    // Inner hex honeycomb detail
-    g.lineStyle(0.5, isl.accent, 0.3);
-    for (let i = 0; i < 6; i++) {
-      const a1 = (Math.PI/3)*i - Math.PI/6;
-      const a2 = (Math.PI/3)*(i+1) - Math.PI/6;
-      g.beginPath();
-      g.moveTo(x, y);
-      g.lineTo(x + Math.cos(a1)*hw*0.5, y + Math.sin(a1)*hw*0.25);
-      g.strokePath();
+    // Inner lines
+    g.lineStyle(0.5, isl.accent, 0.18);
+    hex.forEach(p => { g.beginPath(); g.moveTo(0,0); g.lineTo(p.x,p.y); g.strokePath(); });
+
+    // Glow
+    g.lineStyle(1, isl.lite, 0.08);
+    g.strokeEllipse(0, 0, r*2.1, r*0.92);
+
+    c.add(g);
+
+    // Prop
+    if (isl.prop && this.textures.exists(isl.prop)) {
+      const prop = this.add.image(20, -50, isl.prop).setScale(0.17).setAlpha(0.9);
+      c.add(prop);
     }
 
-    // Island-specific features
-    this.drawIslandFeature(g, isl, x, y, s);
-
-    // Glow ring
-    g.lineStyle(1, isl.accent, 0.15);
-    g.strokeEllipse(x, y + 5, hw*2.2, hw*0.7);
-
-    isl.graphic = g;
-  }
-
-  drawIslandFeature(g, isl, x, y, s) {
-    switch(isl.id) {
-      case 'queen':
-        // Crown/tower
-        g.fillStyle(0xffd060, 0.9);
-        g.fillRect(x-6, y-50*s, 12, 40*s);
-        g.fillStyle(0xF4A825, 1);
-        g.fillTriangle(x-12, y-50*s, x+12, y-50*s, x, y-70*s);
-        g.fillStyle(0xffd060, 0.8);
-        for (let i=-1;i<=1;i++) {
-          g.fillCircle(x+i*8, y-72*s, 4);
-        }
-        break;
-      case 'research':
-        // Telescope
-        g.fillStyle(0x39d98a, 0.8);
-        g.fillRect(x-3, y-40*s, 6, 35*s);
-        g.fillStyle(0x39d98a, 0.6);
-        g.fillEllipse(x, y-45*s, 20, 10);
-        break;
-      case 'wealth':
-        // Coin stacks
-        for (let c=0;c<3;c++) {
-          g.fillStyle(0xF4A825, 0.8);
-          g.fillEllipse(x-20+c*20, y-15, 16, 8);
-          g.fillStyle(0xffd060, 0.6);
-          g.fillEllipse(x-20+c*20, y-18, 16, 8);
-        }
-        break;
-      case 'vault':
-        // Vault door
-        g.fillStyle(0xcd853f, 0.9);
-        g.fillCircle(x, y-20*s, 18*s);
-        g.lineStyle(2, 0xF4A825, 0.8);
-        g.strokeCircle(x, y-20*s, 18*s);
-        g.lineStyle(1, 0xF4A825, 0.5);
-        g.beginPath(); g.moveTo(x, y-20*s); g.lineTo(x+12*s, y-20*s); g.strokePath();
-        g.beginPath(); g.moveTo(x, y-20*s); g.lineTo(x, y-8*s); g.strokePath();
-        break;
-      case 'workshop':
-        // Printer shape
-        g.fillStyle(0x4a9eff, 0.6);
-        g.fillRect(x-18, y-30*s, 36, 28*s);
-        g.fillStyle(0x2d3a4a, 0.9);
-        g.fillRect(x-14, y-26*s, 28, 20*s);
-        g.fillStyle(0x4a9eff, 0.4);
-        g.fillRect(x-10, y-22*s, 20, 12*s);
-        break;
-      case 'security':
-        // Battlements
-        for (let b=-2;b<=2;b++) {
-          g.fillStyle(0x4a6eff, 0.7);
-          g.fillRect(x+b*16-5, y-35*s, 10, 25*s);
-        }
-        // Searchlight
-        g.fillStyle(0xffffff, 0.15);
-        g.fillTriangle(x, y-35*s, x-30, y-60*s, x+30, y-60*s);
-        break;
-      case 'apiary':
-        // Garden/flowers
-        const flowerColors = [0xF4A825, 0x39d98a, 0xff6b9d];
-        for (let f=0;f<4;f++) {
-          g.fillStyle(flowerColors[f%3], 0.8);
-          g.fillCircle(x-24+f*16, y-8, 6);
-        }
-        break;
+    // Bee sprite
+    if (isl.bee && this.textures.exists(isl.bee)) {
+      const bee = this.add.image(isl.beeX, isl.beeY, isl.bee).setScale(isl.scale).setAlpha(0.95);
+      c.add(bee);
+      isl.beeObj = bee;
+      isl.beeBaseY = isl.beeY;
+      this.tweens.add({targets:bee, y:isl.beeY-7, duration:850+Math.random()*350, yoyo:true, repeat:-1, ease:'Sine.easeInOut', delay:Math.random()*500});
     }
-  }
 
-  drawIslandLabel(isl) {
-    const text = this.add.text(isl.x, isl.y + 70, isl.label, {
-      fontFamily: "'Barlow Condensed', sans-serif",
-      fontSize: '11px',
-      color: '#' + Phaser.Display.Color.ValueToColor(isl.accent).color.toString(16).padStart(6,'0'),
-      letterSpacing: 2,
-      alpha: 0.8
-    }).setOrigin(0.5, 0);
-  }
+    // Label
+    c.add(this.add.text(0, 72, isl.label, {fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', color:'#'+isl.accent.toString(16).padStart(6,'0'), letterSpacing:2}).setOrigin(0.5, 0));
 
-  createBees() {
-    const beeAgents = [
-      { name:'queen',       island:'queen',    color:0xF4A825, size:10, role:'ruler' },
-      { name:'scout',       island:'research', color:0x39d98a, size:8,  role:'scout' },
-      { name:'foreman',     island:'workshop', color:0x4a9eff, size:8,  role:'worker' },
-      { name:'chancellor',  island:'vault',    color:0xcd853f, size:8,  role:'worker' },
-      { name:'supervisor',  island:'security', color:0x4a6eff, size:8,  role:'worker' },
-      { name:'nurse',       island:'apiary',   color:0xF4A825, size:7,  role:'patrol' },
-      { name:'treasurer',   island:'wealth',   color:0x9b59b6, size:7,  role:'worker' },
-    ];
-
-    beeAgents.forEach(b => {
-      const isl = this.islands.find(i => i.id === b.island);
-      const bee = this.createBeeSprite(isl.x, isl.y - 30, b.color, b.size);
-      bee.data = b;
-      bee.homeX = isl.x;
-      bee.homeY = isl.y - 30;
-      bee.phase = Math.random() * Math.PI * 2;
-      bee.speed = 0.5 + Math.random() * 0.5;
-      bee.t = Math.random();
-      bee.state = 'hover';
-      this.bees[b.name] = bee;
+    // Hover zone
+    const zone = this.add.zone(0, 0, 155, 100).setInteractive();
+    c.add(zone);
+    zone.on('pointerover', () => {
+      const tt = document.getElementById('island-tooltip');
+      document.getElementById('tt-name').textContent = isl.label;
+      document.getElementById('tt-agents').textContent = isl.agents.join(', ')+'\n'+isl.desc;
+      tt.style.display = 'block';
     });
+    zone.on('pointerout', () => { document.getElementById('island-tooltip').style.display='none'; });
 
-    // Scout fly-off timer
-    this.time.addEvent({
-      delay: 12000,
-      callback: () => this.scoutFlyOff(),
-      callbackScope: this,
-      loop: true
-    });
+    // Float
+    this.tweens.add({targets:c, y:isl.y-5, duration:2400+Math.random()*1200, yoyo:true, repeat:-1, ease:'Sine.easeInOut', delay:Math.random()*1200});
 
-    // Nurse patrol
-    this.nurseAngle = 0;
+    isl.container = c;
   }
 
-  createBeeSprite(x, y, color, size) {
-    const g = this.add.graphics();
-    // Body
-    g.fillStyle(color, 0.9);
-    g.fillEllipse(0, 0, size*2.2, size*1.4);
-    // Stripes
-    g.fillStyle(0x000000, 0.4);
-    g.fillRect(-size*0.3, -size*0.3, size*0.5, size*0.6);
-    g.fillRect(size*0.2, -size*0.3, size*0.5, size*0.6);
-    // Wings
-    g.fillStyle(0xffffff, 0.25);
-    g.fillEllipse(-size*0.4, -size*0.8, size*1.2, size*0.8);
-    g.fillEllipse(size*0.4, -size*0.8, size*1.2, size*0.8);
-    // Stinger
-    g.fillStyle(0x000000, 0.5);
-    g.fillTriangle(size*1.0, 0, size*1.6, -2, size*1.6, 2);
-
-    const container = this.add.container(x, y, [g]);
-    container.beeGraphic = g;
-
-    // Wing animation
-    this.tweens.add({
-      targets: container,
-      y: y - 4,
-      duration: 800 + Math.random()*400,
-      yoyo: true,
-      repeat: -1,
-      ease: 'Sine.easeInOut',
-      delay: Math.random()*400
-    });
-
-    return container;
-  }
-
-  createHoneyParticles() {
-    const particles = [];
-    for (let i = 0; i < 30; i++) {
+  createMotes() {
+    return Array.from({length:28}, () => {
       const g = this.add.graphics();
-      g.fillStyle(0xF4A825, 0.6);
-      g.fillCircle(0, 0, 2);
-      const isl = this.islands[Math.floor(Math.random()*this.islands.length)];
-      g.x = isl.x + Phaser.Math.Between(-60, 60);
-      g.y = isl.y + Phaser.Math.Between(-20, 20);
-      g.startY = g.y;
-      g.speed = 0.3 + Math.random()*0.5;
-      g.alpha = 0.3 + Math.random()*0.5;
-      particles.push(g);
-    }
-    return particles;
+      g.fillStyle(0xF4A825, 0.5); g.fillCircle(0, 0, 1.5);
+      const isl = this.islandDefs[Math.floor(Math.random()*this.islandDefs.length)];
+      g.x = isl.x+Phaser.Math.Between(-55,55);
+      g.y = isl.y+Phaser.Math.Between(-10,20);
+      g.vy = 0.28+Math.random()*0.42;
+      g.alpha = 0.3+Math.random()*0.5;
+      return g;
+    });
   }
 
-  createWorkshopSmoke() {
-    const smoke = [];
-    const workshop = this.islands.find(i => i.id === 'workshop');
-    for (let i = 0; i < 8; i++) {
+  createSmoke() {
+    const w = this.islandDefs.find(i=>i.id==='workshop');
+    return Array.from({length:6}, () => {
       const g = this.add.graphics();
-      g.fillStyle(0x888888, 0.15);
-      g.fillCircle(0, 0, 6 + Math.random()*6);
-      g.x = workshop.x + Phaser.Math.Between(-10, 10);
-      g.y = workshop.y - 40;
-      g.startY = g.y;
-      g.speed = 0.4 + Math.random()*0.3;
-      g.offset = Math.random()*Math.PI*2;
-      smoke.push(g);
-    }
-    return smoke;
+      g.fillStyle(0xaaaaaa, 0.1); g.fillCircle(0, 0, 5+Math.random()*5);
+      g.x = w.x+Phaser.Math.Between(-8,8); g.y = w.y-60;
+      g.vy = 0.32+Math.random()*0.22; g.ox = Math.random()*Math.PI*2;
+      g.alpha = 0.08;
+      return g;
+    });
   }
 
   scoutFlyOff() {
-    const scout = this.bees['scout'];
-    if (!scout || scout.state === 'flying') return;
-    scout.state = 'flying';
-    const W = this.scale.width;
+    const isl = this.islandDefs.find(i=>i.id==='research');
+    if (!isl?.beeObj || isl.beeFlying) return;
+    isl.beeFlying = true;
+    const bee = isl.beeObj, origY = bee.y;
+    this.tweens.add({targets:bee, x:-280, y:bee.y-90, alpha:0, duration:2800, ease:'Sine.easeIn', onComplete:()=>{
+      bee.x=280; bee.y=origY+80; bee.alpha=0;
+      this.tweens.add({targets:bee, x:isl.beeX, y:origY, alpha:0.95, duration:2800, ease:'Sine.easeOut', onComplete:()=>{isl.beeFlying=false;}});
+    }});
+  }
 
-    this.tweens.add({
-      targets: scout,
-      x: -50,
-      y: scout.y - 100,
-      duration: 3000,
-      ease: 'Sine.easeIn',
-      onComplete: () => {
-        scout.x = W + 50;
-        // Return to home
-        this.tweens.add({
-          targets: scout,
-          x: scout.homeX,
-          y: scout.homeY,
-          duration: 3000,
-          ease: 'Sine.easeOut',
-          onComplete: () => { scout.state = 'hover'; }
-        });
+  tick() {
+    this.honeyMotes.forEach(p => {
+      p.y -= p.vy; p.alpha -= 0.0025;
+      if (p.alpha<=0||p.y<30) {
+        const isl = this.islandDefs[Math.floor(Math.random()*this.islandDefs.length)];
+        p.x = isl.x+Phaser.Math.Between(-55,55); p.y = isl.y+20; p.alpha = 0.35+Math.random()*0.45;
+      }
+    });
+    this.smoke.forEach(s => {
+      s.y -= s.vy; s.x += Math.sin(Date.now()*0.001+s.ox)*0.22; s.alpha -= 0.0015;
+      if (s.alpha<=0||s.y<60) {
+        const w = this.islandDefs.find(i=>i.id==='workshop');
+        s.x = w.x+Phaser.Math.Between(-8,8); s.y = w.y-60; s.alpha = 0.08;
       }
     });
   }
 
-  updateBees() {
-    // Honey particles rise
-    this.honeyParticles.forEach(p => {
-      p.y -= p.speed;
-      p.alpha -= 0.003;
-      if (p.alpha <= 0 || p.y < 0) {
-        const isl = this.islands[Math.floor(Math.random()*this.islands.length)];
-        p.x = isl.x + Phaser.Math.Between(-60, 60);
-        p.y = isl.y;
-        p.alpha = 0.4 + Math.random()*0.4;
-      }
-    });
-
-    // Smoke
-    this.workshopSmoke.forEach(s => {
-      s.y -= s.speed;
-      s.x += Math.sin(this.time.now * 0.001 + s.offset) * 0.3;
-      s.alpha -= 0.002;
-      if (s.alpha <= 0 || s.y < this.scale.height * 0.2) {
-        const workshop = this.islands.find(i => i.id === 'workshop');
-        s.x = workshop.x + Phaser.Math.Between(-10, 10);
-        s.y = workshop.y - 40;
-        s.alpha = 0.12;
-      }
-    });
-
-    // Nurse patrol
-    this.nurseAngle += 0.008;
-    const nurse = this.bees['nurse'];
-    if (nurse && nurse.state === 'hover') {
-      const cx = this.scale.width / 2;
-      const cy = this.scale.height / 2 - 20;
-      nurse.x = cx + Math.cos(this.nurseAngle) * 200;
-      nurse.y = cy + Math.sin(this.nurseAngle) * 80;
-    }
-  }
-
-  update() {
-    // Gentle island bob
-    const t = this.time.now * 0.0005;
-    this.islands.forEach((isl, i) => {
-      if (isl.graphic) {
-        isl.graphic.y = Math.sin(t + i) * 3;
-      }
-    });
-  }
+  update() {}
 }
 
-// ══════════════════════════════════════════════════════
-// PHASER CONFIG
-// ══════════════════════════════════════════════════════
-const config = {
-  type: Phaser.AUTO,
-  width: window.innerWidth,
-  height: window.innerHeight,
-  backgroundColor: '#08080f',
-  parent: 'game-canvas',
-  scene: HiveWorld,
-  scale: {
-    mode: Phaser.Scale.RESIZE,
-    autoCenter: Phaser.Scale.CENTER_BOTH
-  }
-};
+const game = new Phaser.Game({
+  type: Phaser.AUTO, width: window.innerWidth, height: window.innerHeight,
+  backgroundColor: '#08080f', parent: 'game-canvas', scene: HiveWorld,
+  scale: {mode: Phaser.Scale.RESIZE, autoCenter: Phaser.Scale.CENTER_BOTH}
+});
+window.addEventListener('resize', () => game.scale.resize(window.innerWidth, window.innerHeight));
 
-const game = new Phaser.Game(config);
-
-// ══════════════════════════════════════════════════════
-// HUD DATA
-// ══════════════════════════════════════════════════════
+// ── HUD DATA ──
 const AGENTS_DEF = [
-  { name:'auditor',      phase:1 },
-  { name:'bard',         phase:1 },
-  { name:'chancellor',   phase:1 },
-  { name:'engineer',     phase:1 },
-  { name:'forager',      phase:2 },
-  { name:'foreman',      phase:1 },
-  { name:'inspector',    phase:1 },
-  { name:'nurse',        phase:1 },
-  { name:'queen',        phase:1 },
-  { name:'quartermaster',phase:1 },
-  { name:'scout',        phase:1 },
-  { name:'supervisor',   phase:1 },
-  { name:'switchboard',  phase:1 },
-  { name:'treasurer',    phase:1 },
-  { name:'warden',       phase:1 },
-  { name:'worker',       phase:1 },
+  {name:'auditor',phase:1},{name:'bard',phase:1},{name:'chancellor',phase:1},
+  {name:'engineer',phase:1},{name:'forager',phase:2},{name:'foreman',phase:1},
+  {name:'inspector',phase:1},{name:'nurse',phase:1},{name:'queen',phase:1},
+  {name:'quartermaster',phase:1},{name:'scout',phase:1},{name:'supervisor',phase:1},
+  {name:'switchboard',phase:1},{name:'treasurer',phase:1},{name:'warden',phase:1},
+  {name:'worker',phase:1},
 ];
+const HONEY_COLORS = {tax:'#e8403a',venture:'#4a9eff',reinvest:'#39d98a',profit:'#F4A825',chancellor:'#cd853f'};
+const fmt = n => '$'+(n||0).toFixed(2);
 
-const HONEY_COLORS = {
-  tax:       '#e8403a',
-  venture:   '#4a9eff',
-  reinvest:  '#39d98a',
-  profit:    '#F4A825',
-  chancellor:'#cd853f'
-};
-
-function fmt(n) { return '$' + (n||0).toFixed(2); }
-
-function renderAgents(data) {
-  const online = data?.agents?.online || [];
-  const silent = data?.agents?.silent || [];
-  const list = document.getElementById('agent-list');
-  list.innerHTML = AGENTS_DEF.map(a => {
-    const isOnline = online.includes(a.name);
-    const isPhase2 = a.phase === 2;
-    const cls = isOnline ? 'online' : isPhase2 ? 'phase2' : 'silent';
-    const tag = isOnline ? 'ONLINE' : isPhase2 ? 'P2' : 'SILENT';
-    return `<div class="agent-row ${isOnline ? 'online' : ''}">
-      <div class="agent-dot ${cls}"></div>
-      <div class="agent-name">${a.name}</div>
-      <div class="agent-tag ${cls}">${tag}</div>
-    </div>`;
+function renderAgents(d) {
+  const online = d?.agents?.online||[], silent = d?.agents?.silent||[];
+  document.getElementById('agent-list').innerHTML = AGENTS_DEF.map(a => {
+    const on = online.includes(a.name), p2 = a.phase===2&&!on;
+    const cls = on?'online':p2?'phase2':'silent';
+    return `<div class="agent-row ${on?'online':''}"><div class="agent-dot ${cls}"></div><div class="agent-name">${a.name}</div><div class="agent-tag ${cls}">${on?'ON':p2?'P2':'—'}</div></div>`;
   }).join('');
 }
 
 function renderHoney(split) {
   if (!split) return;
-  const total = Object.values(split).reduce((a,b)=>a+b, 0) || 1;
-  document.getElementById('honey-bars').innerHTML = Object.entries(split).map(([k,v]) => `
-    <div class="honey-row">
-      <div class="honey-label">${k}</div>
-      <div class="honey-bar-wrap">
-        <div class="honey-bar-fill" style="width:${Math.min((v/total)*100,100)}%;background:${HONEY_COLORS[k]||'#F4A825'}"></div>
-      </div>
-      <div class="honey-amt">${fmt(v)}</div>
-    </div>
-  `).join('');
+  const total = Object.values(split).reduce((a,b)=>a+b,0)||1;
+  document.getElementById('honey-bars').innerHTML = Object.entries(split).map(([k,v])=>
+    `<div class="honey-row"><div class="honey-label">${k}</div><div class="honey-bar-wrap"><div class="honey-bar-fill" style="width:${Math.min((v/total)*100,100)}%;background:${HONEY_COLORS[k]||'#F4A825'}"></div></div><div class="honey-amt">${fmt(v)}</div></div>`
+  ).join('');
 }
 
 function renderTicker(activity) {
-  if (!activity || !activity.length) return;
-  const inner = document.getElementById('ticker-inner');
-  const items = [...activity, ...activity].map(a =>
-    `<div class="ticker-item"><span class="t-agent">${a.agent}</span><span class="t-sep">//</span><span>${a.raw||a.text}</span></div>`
-  ).join('');
-  inner.innerHTML = items;
+  if (!activity?.length) return;
+  const items = [...activity,...activity].map(a=>`<div class="ticker-item"><span class="t-agent">${a.agent}</span><span style="opacity:0.3">//</span><span>${a.raw||a.text}</span></div>`).join('');
+  document.getElementById('ticker-inner').innerHTML = items;
 }
 
 function applyData(d) {
-  hiveData = d;
-  const f = d.financial || {};
-  const m = d.market || {};
-  const dec = d.decree || {};
-
-  // Top bar
-  document.getElementById('agent-count').textContent = (d.agents?.online_count || 0) + ' ACTIVE';
-  document.getElementById('recovery-top').textContent = (f.recovery_pct || 0).toFixed(1) + '% RECOVERED';
-
-  // Financials
+  const f=d.financial||{}, m=d.market||{}, dec=d.decree||{};
+  document.getElementById('agent-count').textContent = (d.agents?.online_count||0)+' ACTIVE';
+  document.getElementById('recovery-top').textContent = (f.recovery_pct||0).toFixed(1)+'% RECOVERED';
   document.getElementById('rev-today').textContent = fmt(f.revenue_today);
   document.getElementById('rev-mtd').textContent = fmt(f.revenue_mtd);
   document.getElementById('net-profit').textContent = fmt(f.net_profit);
   document.getElementById('gross-all').textContent = fmt(f.gross_all_time);
   document.getElementById('rec-pct').textContent = (f.recovery_pct||0).toFixed(1)+'%';
-  document.getElementById('rec-fill').style.width = Math.min(f.recovery_pct||0, 100) + '%';
-
-  // Honey
+  document.getElementById('rec-fill').style.width = Math.min(f.recovery_pct||0,100)+'%';
   renderHoney(f.honey_split);
-
-  // Market
-  document.getElementById('market-niche').textContent = m.niche || '—';
-  document.getElementById('vigor-num').textContent = m.vigor || '—';
+  document.getElementById('market-niche').textContent = m.niche||'—';
+  document.getElementById('vigor-num').textContent = m.vigor||'—';
   document.getElementById('market-dir').textContent = (m.direction||'—').toUpperCase();
   document.getElementById('market-action').textContent = (m.action||'—').replace(/_/g,' ').toUpperCase();
-  document.getElementById('market-mhr').textContent = m.mhr_target ? '$'+m.mhr_target+'/MHR' : '—';
-
-  // Decree badge
+  document.getElementById('market-mhr').textContent = m.mhr_target?'$'+m.mhr_target+'/MHR':'—';
   const badge = document.getElementById('decree-badge');
   badge.textContent = (dec.decision||'—').toUpperCase();
-  badge.style.color = dec.decision === 'approved' ? 'var(--green)' : dec.decision === 'denied' ? 'var(--red)' : 'var(--text-dim)';
-
-  // Decree overlay (once)
-  if (!decreeShown && dec.decision === 'approved') {
-    showDecree(d);
-  }
-
-  // Agents
+  badge.style.color = dec.decision==='approved'?'var(--green)':dec.decision==='denied'?'var(--red)':'var(--text-dim)';
+  if (!decreeShown&&dec.decision==='approved') showDecree(d);
   renderAgents(d);
-
-  // Ticker
   renderTicker(d.activity);
 }
 
 function showDecree(d) {
-  const dec = d.decree || {};
-  const m = d.market || {};
-  document.getElementById('decree-niche').textContent = m.niche || '—';
-  document.getElementById('decree-worker').textContent = dec.worker || '—';
-  document.getElementById('decree-spend').textContent = fmt(dec.spend);
-  document.getElementById('decree-model').textContent = dec.model_rec || '—';
-  document.getElementById('decree-reasoning').textContent = dec.reasoning || '—';
+  const dec=d.decree||{}, m=d.market||{};
+  document.getElementById('decree-niche').textContent=m.niche||'—';
+  document.getElementById('decree-worker').textContent=dec.worker||'—';
+  document.getElementById('decree-spend').textContent=fmt(dec.spend);
+  document.getElementById('decree-model').textContent=dec.model_rec||'—';
+  document.getElementById('decree-reasoning').textContent=dec.reasoning||'—';
   document.getElementById('decree-overlay').classList.add('active');
-  decreeShown = true;
+  decreeShown=true;
 }
+function closeDecree() { document.getElementById('decree-overlay').classList.remove('active'); }
 
-function closeDecree() {
-  document.getElementById('decree-overlay').classList.remove('active');
-}
+setInterval(()=>{
+  const n=new Date();
+  document.getElementById('live-clock').textContent=String(n.getUTCHours()).padStart(2,'0')+':'+String(n.getUTCMinutes()).padStart(2,'0')+':'+String(n.getUTCSeconds()).padStart(2,'0');
+},1000);
 
 async function fetchData() {
   try {
-    const res = await fetch(API + '/hive-status', { cache:'no-store' });
-    const data = await res.json();
-    applyData(data);
+    const r = await fetch(API+'/hive-status',{cache:'no-store'});
+    applyData(await r.json());
+    document.getElementById('system-status').textContent='CHANCELLOR ONLINE';
+    document.getElementById('system-status').style.color='';
   } catch(e) {
-    console.error('[HIVE]', e);
-    document.getElementById('system-status').textContent = 'CHANCELLOR OFFLINE';
-    document.getElementById('system-status').style.color = 'var(--red)';
+    document.getElementById('system-status').textContent='CHANCELLOR OFFLINE';
+    document.getElementById('system-status').style.color='var(--red)';
   }
 }
-
-// Clock
-function updateClock() {
-  const now = new Date();
-  document.getElementById('live-clock').textContent =
-    String(now.getUTCHours()).padStart(2,'0') + ':' +
-    String(now.getUTCMinutes()).padStart(2,'0') + ':' +
-    String(now.getUTCSeconds()).padStart(2,'0');
-}
-
-setInterval(updateClock, 1000);
-updateClock();
 fetchData();
 setInterval(fetchData, REFRESH);
 
-// ══════════════════════════════════════════════════════
-// QUEEN CHAT
-// ══════════════════════════════════════════════════════
-function toggleQueenChat() {
-  document.getElementById('queen-chat').classList.toggle('open');
-}
-
+function toggleQueenChat() { document.getElementById('queen-chat').classList.toggle('open'); }
 async function sendQueenMsg() {
-  const input = document.getElementById('qc-input');
-  const msg = input.value.trim();
+  const input=document.getElementById('qc-input'), msg=input.value.trim();
   if (!msg) return;
-  input.value = '';
-  const msgs = document.getElementById('qc-messages');
-  msgs.innerHTML += `<div class="qc-msg user">${msg}</div>`;
-  msgs.innerHTML += `<div class="qc-msg thinking" id="qc-thinking">Queen thinking...</div>`;
-  msgs.scrollTop = msgs.scrollHeight;
+  input.value='';
+  const msgs=document.getElementById('qc-messages');
+  msgs.innerHTML+=`<div class="qc-msg user">${msg}</div><div class="qc-msg thinking" id="qc-thinking">Queen thinking...</div>`;
+  msgs.scrollTop=msgs.scrollHeight;
   try {
-    const res = await fetch(API + '/agent/queen/chat', {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({message:msg})
-    });
-    const data = await res.json();
+    const r=await fetch(API+'/agent/queen/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:msg})});
+    const data=await r.json();
     document.getElementById('qc-thinking')?.remove();
-    msgs.innerHTML += `<div class="qc-msg queen">${(data.reply||data.error||'No response').replace(/\n/g,'<br>')}</div>`;
-    msgs.scrollTop = msgs.scrollHeight;
+    msgs.innerHTML+=`<div class="qc-msg queen">${(data.reply||data.error||'No response').replace(/\n/g,'<br>').replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')}</div>`;
+    msgs.scrollTop=msgs.scrollHeight;
   } catch(e) {
     document.getElementById('qc-thinking')?.remove();
-    msgs.innerHTML += `<div class="qc-msg queen" style="color:var(--red)">Error: ${e.message}</div>`;
+    msgs.innerHTML+=`<div class="qc-msg queen" style="color:var(--red)">Error: ${e.message}</div>`;
   }
 }
-
-// Resize handler
-window.addEventListener('resize', () => {
-  game.scale.resize(window.innerWidth, window.innerHeight);
-});
 </script>
 </body>
 </html>
