@@ -184,16 +184,23 @@ canvas#world{position:fixed;inset:0;width:100%;height:100%;}
 <script>
 const API='http://192.168.50.10:8001';
 const ASSETS='http://192.168.50.10:8080/assets';
-const ROOMS=ASSETS+'/rooms';
+const ROOMS_URL=ASSETS+'/rooms';
 const REFRESH=30000;
 let decreeShown=false;
 
 const canvas=document.getElementById('world');
 const ctx=canvas.getContext('2d');
-let W,H,cx,cy;
-function resize(){W=canvas.width=window.innerWidth;H=canvas.height=window.innerHeight;cx=W/2;cy=H/2;}
+let W,H,CX,CY;
+
+function resize(){
+  W=canvas.width=window.innerWidth;
+  H=canvas.height=window.innerHeight;
+  // Center slightly above vertical middle, between left panel (186px) and right panel (206px)
+  CX=W/2+10;
+  CY=H/2+30;
+}
 resize();
-window.addEventListener('resize',()=>{resize();});
+window.addEventListener('resize',resize);
 
 // ── Image loader ──
 const IMGS={};
@@ -201,204 +208,249 @@ function loadImg(key,src){
   return new Promise(res=>{
     const img=new Image();
     img.onload=()=>{IMGS[key]=img;res();};
-    img.onerror=()=>{res();};
+    img.onerror=()=>{console.warn('Failed:',src);res();};
     img.src=src;
   });
 }
 
-// ── Island definitions ──
-// x,y = screen offset from center (in pixels, before bob)
-// size = render width of the room image
-const ISLANDS=[
-  {id:'queen',    label:"Queen's Court",   room:'room-queen',    bee:'bee-queen',    beeScale:0.10,
-   ox:0,   oy:-260, size:320, beeOff:{x:-30,y:-160},
-   accent:'#F4A825', agents:['queen'],           desc:"Strategic HQ\nRoyal Decrees issued here", bob:0},
+// ── Honeycomb grid layout ──
+// Room images are ~square but the visible hex content is:
+// width ≈ 0.87 * image_size, height ≈ 0.75 * image_size
+// For seamless hex tiling:
+//   col offset: image_size * 0.75 (3/4 width)
+//   row offset: image_size * 0.433 (half hex height ≈ sqrt(3)/4 * size)
+// With size=290, available viewport = 1288-186-206=896px wide, 1192-48-34=1110px tall
 
-  {id:'research', label:'Research Station',room:'room-research',  bee:'bee-scout',    beeScale:0.09,
-   ox:-340,oy:-100, size:280, beeOff:{x:-30,y:-140},
-   accent:'#39d98a', agents:['scout','bard'],     desc:"Market research\nScout waggle dances",    bob:1.2},
+const SIZE=290; // room image render size
+const HX=SIZE*0.74;  // horizontal step between adjacent hex columns
+const HY=SIZE*0.44;  // vertical step between rows
 
-  {id:'wealth',   label:'Wealth Garden',   room:'room-wealth',    bee:null,           beeScale:0.09,
-   ox:340, oy:-100, size:280, beeOff:{x:0,y:0},
-   accent:'#9b59b6', agents:['forager','treasurer'],desc:"Revenue tracking\nTreasurer verdicts",  bob:0.7},
+// 7-island diamond: row by row
+// Row 0 (top):    queen         (col 0)
+// Row 1:          research, wealth  (col -1, +1)
+// Row 2 (mid):    vault         (col 0)
+// Row 3:          workshop, security (col -1, +1)
+// Row 4 (bot):    apiary        (col 0)
 
-  {id:'vault',    label:'The Vault',        room:'room-vault',     bee:null,           beeScale:0.09,
-   ox:0,   oy:40,   size:300, beeOff:{x:0,y:0},
-   accent:'#cd853f', agents:['chancellor'],       desc:"Financial records\nHoney split ledger",   bob:1.8},
-
-  {id:'workshop', label:'The Workshop',     room:'room-workshop',  bee:'bee-foreman',  beeScale:0.09,
-   ox:-320,oy:180,  size:280, beeOff:{x:-25,y:-140},
-   accent:'#4a9eff', agents:['foreman','engineer'],desc:"A1 Mini printing\nActive production",    bob:2.5},
-
-  {id:'security', label:'Security',         room:'room-security',  bee:null,           beeScale:0.09,
-   ox:320, oy:180,  size:280, beeOff:{x:0,y:0},
-   accent:'#4a6eff', agents:['supervisor','warden'],desc:"Code audit\nSecurity monitoring",       bob:3.1},
-
-  {id:'apiary',   label:'The Apiary',       room:'room-apiary',    bee:null,           beeScale:0.09,
-   ox:0,   oy:320,  size:280, beeOff:{x:0,y:0},
-   accent:'#F4A825', agents:['nurse','quartermaster'],desc:"Storage mgmt\nMorning briefings",     bob:2.0},
+const GRID=[
+  // id, gridCol, gridRow
+  ['queen',    0, 0],
+  ['research',-1, 1],
+  ['wealth',   1, 1],
+  ['vault',    0, 2],
+  ['workshop',-1, 3],
+  ['security', 1, 3],
+  ['apiary',   0, 4],
 ];
 
-let t=0, hovId=null;
+// Convert grid coords to screen offsets from center
+// Diamond pattern: even rows centered, odd rows offset
+function gridToOffset(col, row){
+  const x = col * HX;
+  const y = row * HY * 2; // *2 because each row is one hex height apart
+  return {x, y};
+}
 
-// ── Stars ──
-const STARS=Array.from({length:220},()=>({
-  x:Math.random()*3000,y:Math.random()*2000,
-  r:Math.random()*1.3,a:Math.random()*0.45+0.05
+// Bee positions relative to room center (front-center of each room)
+// Rooms are isometric so the "floor" is in the bottom 40% of the image
+const BEE_IN_ROOM = {x: 0, y: 30}; // slightly below center = front floor area
+
+const ISLANDS=[
+  {id:'queen',    label:"Queen's Court",   room:'room-queen',    bee:'bee-queen',   beeScale:0.085,
+   accent:'#F4A825',agents:['queen'],          desc:"Strategic HQ\nRoyal Decrees",      bob:0},
+  {id:'research', label:'Research Station',room:'room-research',  bee:'bee-scout',   beeScale:0.075,
+   accent:'#39d98a',agents:['scout','bard'],   desc:"Market research\nScout dances",    bob:1.1},
+  {id:'wealth',   label:'Wealth Garden',   room:'room-wealth',    bee:null,          beeScale:0.075,
+   accent:'#9b59b6',agents:['forager','treasurer'],desc:"Revenue\nTreasurer verdicts",  bob:0.6},
+  {id:'vault',    label:'The Vault',        room:'room-vault',     bee:null,          beeScale:0.075,
+   accent:'#cd853f',agents:['chancellor'],     desc:"Financial records\nHoney split",   bob:1.7},
+  {id:'workshop', label:'The Workshop',     room:'room-workshop',  bee:'bee-foreman', beeScale:0.075,
+   accent:'#4a9eff',agents:['foreman','engineer'],desc:"A1 Mini printing\nProduction",  bob:2.4},
+  {id:'security', label:'Security',         room:'room-security',  bee:null,          beeScale:0.075,
+   accent:'#4a6eff',agents:['supervisor','warden'],desc:"Code audit\nMonitoring",       bob:3.0},
+  {id:'apiary',   label:'The Apiary',       room:'room-apiary',    bee:null,          beeScale:0.075,
+   accent:'#F4A825',agents:['nurse','quartermaster'],desc:"Storage mgmt\nBriefings",   bob:1.9},
+];
+
+// Attach grid positions to islands
+GRID.forEach(([id,col,row])=>{
+  const isl=ISLANDS.find(i=>i.id===id);
+  if(isl){const o=gridToOffset(col,row);isl.ox=o.x;isl.oy=o.y;}
+});
+
+let t=0,hovId=null;
+
+// Stars
+const STARS=Array.from({length:200},()=>({
+  x:Math.random()*3000,y:Math.random()*2000,r:Math.random()*1.3,a:Math.random()*0.4+0.05
 }));
 
-// ── Honey motes ──
+// Honey motes
 let motes=[];
 function initMotes(){
-  motes=Array.from({length:40},()=>{
+  motes=Array.from({length:35},()=>{
     const isl=ISLANDS[Math.floor(Math.random()*ISLANDS.length)];
-    return {
-      x:cx+isl.ox+(Math.random()-.5)*120,
-      y:cy+isl.oy+(Math.random()-.5)*60,
-      vy:-(0.3+Math.random()*.5),vx:(Math.random()-.5)*.3,
-      a:0.4+Math.random()*.5,r:1+Math.random(),isl
-    };
+    return{x:CX+isl.ox+(Math.random()-.5)*140,y:CY+isl.oy+(Math.random()-.5)*80,
+      vy:-(0.28+Math.random()*.45),vx:(Math.random()-.5)*.3,a:0.35+Math.random()*.5,r:1+Math.random()*.8,isl};
   });
 }
 
-// ── Workshop smoke ──
+// Smoke
 let smoke=[];
 function initSmoke(){
   const ws=ISLANDS.find(i=>i.id==='workshop');
-  smoke=Array.from({length:8},()=>({
-    x:cx+ws.ox+(Math.random()-.5)*30,
-    y:cy+ws.oy-80,
-    vy:-(0.4+Math.random()*.3),vx:(Math.random()-.5)*.3,
-    a:0.1+Math.random()*.08,r:7+Math.random()*6,ox:Math.random()*Math.PI*2
+  smoke=Array.from({length:7},()=>({
+    x:CX+ws.ox+(Math.random()-.5)*35,y:CY+ws.oy-SIZE*0.3,
+    vy:-(0.35+Math.random()*.28),vx:(Math.random()-.5)*.3,
+    a:0.09+Math.random()*.07,r:7+Math.random()*6,ox:Math.random()*Math.PI*2
   }));
 }
 
-function drawRoom(isl, bob){
-  const img=IMGS[isl.room];
-  if(!img) return;
-  const x=cx+isl.ox, y=cy+isl.oy+bob;
-  const w=isl.size, h=isl.size;
-
-  // Glow on hover
-  if(hovId===isl.id){
-    ctx.save();
-    const gr=ctx.createRadialGradient(x,y,20,x,y,isl.size*0.6);
-    const r=parseInt(isl.accent.slice(1,3),16);
-    const g=parseInt(isl.accent.slice(3,5),16);
-    const b=parseInt(isl.accent.slice(5,7),16);
-    gr.addColorStop(0,`rgba(${r},${g},${b},0.2)`);
-    gr.addColorStop(1,'rgba(0,0,0,0)');
-    ctx.fillStyle=gr;
-    ctx.beginPath();ctx.arc(x,y,isl.size*0.6,0,Math.PI*2);ctx.fill();
-    ctx.restore();
-  }
-
-  // Draw room image centered
-  ctx.drawImage(img, x-w/2, y-h/2, w, h);
-
-  // Accent outline on hover
-  if(hovId===isl.id){
-    ctx.save();
-    ctx.strokeStyle=isl.accent;
-    ctx.lineWidth=2;
-    ctx.globalAlpha=0.4;
-    // Hex clip outline approximation
-    ctx.beginPath();
-    ctx.rect(x-w/2, y-h/2, w, h);
-    ctx.stroke();
-    ctx.restore();
-  }
-
-  // Label below room
-  ctx.save();
-  ctx.font="600 12px 'Barlow Condensed',sans-serif";
-  ctx.textAlign='center';
-  ctx.fillStyle=isl.accent;
-  ctx.globalAlpha=0.85;
-  ctx.fillText(isl.label, x, y+h/2+18);
-  ctx.restore();
-
-  // Store screen pos for hit testing
-  isl._sx=x; isl._sy=y; isl._hw=w/2; isl._hh=h/2;
+// Hex clip path for a room at (cx,cy) with given size
+// The hex is oriented flat-top: points at left/right, edges top-left/right, bottom-left/right
+function hexClip(cx,cy,s){
+  const w=s*0.5, h=s*0.43; // half-width and half-height of hex content
+  ctx.beginPath();
+  ctx.moveTo(cx,      cy-h*2);   // top
+  ctx.lineTo(cx+w*1.5,cy-h);     // top-right
+  ctx.lineTo(cx+w*1.5,cy+h);     // bottom-right
+  ctx.lineTo(cx,      cy+h*2);   // bottom
+  ctx.lineTo(cx-w*1.5,cy+h);     // bottom-left
+  ctx.lineTo(cx-w*1.5,cy-h);     // top-left
+  ctx.closePath();
 }
 
-function drawBee(isl, bob){
-  if(!isl.bee||!IMGS[isl.bee]) return;
+function drawRoom(isl,bob){
+  const img=IMGS[isl.room];
+  const rx=CX+isl.ox, ry=CY+isl.oy+bob;
+  const s=SIZE;
+
+  if(img){
+    ctx.save();
+    // Soft glow behind room
+    if(hovId===isl.id){
+      const R=parseInt(isl.accent.slice(1,3),16);
+      const G=parseInt(isl.accent.slice(3,5),16);
+      const B=parseInt(isl.accent.slice(5,7),16);
+      const gr=ctx.createRadialGradient(rx,ry,20,rx,ry,s*0.65);
+      gr.addColorStop(0,`rgba(${R},${G},${B},0.25)`);
+      gr.addColorStop(1,'rgba(0,0,0,0)');
+      ctx.fillStyle=gr;
+      ctx.beginPath();ctx.arc(rx,ry,s*0.65,0,Math.PI*2);ctx.fill();
+    }
+
+    // Draw room image — no clip so the hex outline shows naturally
+    ctx.drawImage(img, rx-s/2, ry-s/2, s, s);
+
+    // Hover accent border — trace hex shape
+    if(hovId===isl.id){
+      hexClip(rx,ry,s*0.88);
+      ctx.strokeStyle=isl.accent;
+      ctx.lineWidth=2;
+      ctx.globalAlpha=0.5;
+      ctx.stroke();
+      ctx.globalAlpha=1;
+    }
+    ctx.restore();
+  } else {
+    // Placeholder
+    ctx.save();
+    ctx.fillStyle='rgba(244,168,37,0.05)';
+    ctx.beginPath();ctx.arc(rx,ry,s/2,0,Math.PI*2);ctx.fill();
+    ctx.restore();
+  }
+
+  // Label — below the room
+  ctx.save();
+  ctx.font="600 11px 'Barlow Condensed',sans-serif";
+  ctx.textAlign='center';
+  ctx.fillStyle=isl.accent;
+  ctx.globalAlpha=0.8;
+  ctx.fillText(isl.label, rx, ry+s/2+14);
+  ctx.restore();
+
+  // Store for hit testing
+  isl._sx=rx; isl._sy=ry; isl._sr=s/2;
+}
+
+function drawBee(isl,bob){
+  if(!isl.bee||!IMGS[isl.bee])return;
   const img=IMGS[isl.bee];
   const sc=isl.beeScale;
   const iw=img.width*sc, ih=img.height*sc;
-  const x=cx+isl.ox+isl.beeOff.x;
-  const y=cy+isl.oy+bob+isl.beeOff.y;
-  // Bee bobs slightly faster than room
-  const beeBob=Math.sin(t*1.2+isl.bob)*4;
-  ctx.drawImage(img, x-iw/2, y+beeBob-ih, iw, ih);
+  const rx=CX+isl.ox, ry=CY+isl.oy+bob;
+  // Place bee at front-floor of room (lower-center of hex)
+  const bx=rx+BEE_IN_ROOM.x;
+  const by=ry+BEE_IN_ROOM.y;
+  // Bee hover bob — slightly faster and offset
+  const beeBob=Math.sin(t*1.3+isl.bob)*3;
+  ctx.drawImage(img, bx-iw/2, by+beeBob-ih*0.7, iw, ih);
 }
 
 function drawConnections(){
   const q=ISLANDS[0];
-  const qx=cx+q.ox, qy=cy+q.oy+Math.sin(t*0.5)*5;
+  const qx=CX+q.ox, qy=CY+q.oy+Math.sin(t*0.5)*5;
+  ctx.save();
   ISLANDS.slice(1).forEach(isl=>{
-    const ix=cx+isl.ox, iy=cy+isl.oy+Math.sin(t*0.5+isl.bob)*5;
-    ctx.save();
+    const ix=CX+isl.ox, iy=CY+isl.oy+Math.sin(t*0.5+isl.bob)*5;
     ctx.beginPath();ctx.moveTo(qx,qy);ctx.lineTo(ix,iy);
-    ctx.strokeStyle='rgba(244,168,37,0.12)';ctx.lineWidth=1;
-    ctx.setLineDash([5,12]);ctx.stroke();ctx.setLineDash([]);
-    ctx.restore();
+    ctx.strokeStyle='rgba(244,168,37,0.1)';ctx.lineWidth=1;
+    ctx.setLineDash([4,12]);ctx.stroke();ctx.setLineDash([]);
   });
+  ctx.restore();
 }
 
 function render(){
   ctx.clearRect(0,0,W,H);
   ctx.fillStyle='#08080f';ctx.fillRect(0,0,W,H);
 
-  // Stars
   STARS.forEach(s=>{
     ctx.beginPath();ctx.arc(s.x%W,s.y%H,s.r,0,Math.PI*2);
     ctx.fillStyle=`rgba(255,255,255,${s.a})`;ctx.fill();
   });
 
-  // Nebula glow
-  const nb=ctx.createRadialGradient(cx,cy,40,cx,cy,Math.max(W,H)*0.55);
-  nb.addColorStop(0,'rgba(244,168,37,0.025)');nb.addColorStop(1,'rgba(0,0,0,0)');
+  const nb=ctx.createRadialGradient(CX,CY,40,CX,CY,Math.max(W,H)*0.55);
+  nb.addColorStop(0,'rgba(244,168,37,0.02)');nb.addColorStop(1,'rgba(0,0,0,0)');
   ctx.fillStyle=nb;ctx.fillRect(0,0,W,H);
 
   drawConnections();
 
-  // Draw rooms back-to-front by oy
+  // Sort rooms top-to-bottom (oy ascending) so lower rooms draw on top
   const sorted=[...ISLANDS].sort((a,b)=>a.oy-b.oy);
+
   sorted.forEach(isl=>{
-    const bob=Math.sin(t*0.45+isl.bob)*6;
+    const bob=Math.sin(t*0.42+isl.bob)*5;
     drawRoom(isl,bob);
   });
 
-  // Draw bee sprites on top of all rooms
+  // Bees on top of all rooms
   sorted.forEach(isl=>{
-    const bob=Math.sin(t*0.45+isl.bob)*6;
+    const bob=Math.sin(t*0.42+isl.bob)*5;
     drawBee(isl,bob);
   });
 
   // Honey motes
   motes.forEach(p=>{
-    p.y+=p.vy;p.x+=p.vx;p.a-=0.002;
+    p.y+=p.vy;p.x+=p.vx;p.a-=0.0018;
     if(p.a<=0||p.y<40){
       const isl=p.isl;
-      p.x=cx+isl.ox+(Math.random()-.5)*120;
-      p.y=cy+isl.oy+20;p.a=0.35+Math.random()*.45;
+      p.x=CX+isl.ox+(Math.random()-.5)*140;
+      p.y=CY+isl.oy+30;p.a=0.3+Math.random()*.45;
     }
     ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
     ctx.fillStyle=`rgba(244,168,37,${p.a})`;ctx.fill();
   });
 
-  // Smoke
+  // Smoke from workshop
   const ws=ISLANDS.find(i=>i.id==='workshop');
   smoke.forEach(s=>{
-    s.y+=s.vy;s.x+=Math.sin(t*.9+s.ox)*.25+s.vx;s.a-=0.0012;
-    if(s.a<=0||s.y<50){
-      s.x=cx+ws.ox+(Math.random()-.5)*30;
-      s.y=cy+ws.oy-80;s.a=0.09;
+    s.y+=s.vy;s.x+=Math.sin(t*.85+s.ox)*.22+s.vx;s.a-=0.001;
+    if(s.a<=0){
+      s.x=CX+ws.ox+(Math.random()-.5)*35;
+      s.y=CY+ws.oy-SIZE*0.3;s.a=0.08;
     }
     ctx.beginPath();ctx.arc(s.x,s.y,s.r,0,Math.PI*2);
-    ctx.fillStyle=`rgba(160,160,160,${s.a})`;ctx.fill();
+    ctx.fillStyle=`rgba(155,155,155,${s.a})`;ctx.fill();
   });
 
   t+=0.016;
@@ -410,8 +462,9 @@ canvas.addEventListener('mousemove',e=>{
   const mx=e.clientX,my=e.clientY;
   hovId=null;
   ISLANDS.forEach(isl=>{
-    if(!isl._sx) return;
-    if(Math.abs(mx-isl._sx)<isl._hw&&Math.abs(my-isl._sy)<isl._hh) hovId=isl.id;
+    if(!isl._sx)return;
+    const dx=mx-isl._sx,dy=my-isl._sy;
+    if(Math.sqrt(dx*dx+dy*dy)<isl._sr*0.7) hovId=isl.id;
   });
   const tt=document.getElementById('tooltip');
   if(hovId){
@@ -425,41 +478,42 @@ canvas.addEventListener('mousemove',e=>{
 });
 canvas.addEventListener('mouseleave',()=>{hovId=null;document.getElementById('tooltip').style.display='none';});
 
-// Scout fly-off
-let scoutT=0;
+// Scout fly-off animation
+let scoutFlying=false;
 setInterval(()=>{
+  if(scoutFlying)return;
+  scoutFlying=true;
   const isl=ISLANDS.find(i=>i.id==='research');
-  if(!isl||scoutT>0)return;
-  scoutT=6000;
-  // Animate scout bee off-screen and back
-  const startX=cx+isl.ox+isl.beeOff.x;
-  const startY=cy+isl.oy+isl.beeOff.y;
-  const origOff={...isl.beeOff};
+  const origOff={...BEE_IN_ROOM};
   let elapsed=0;
+  isl._beeOff={...BEE_IN_ROOM};
   const fly=setInterval(()=>{
     elapsed+=50;
     if(elapsed<2500){
       const p=elapsed/2500;
-      isl.beeOff={x:origOff.x+p*(-W),y:origOff.y-p*100};
-    } else if(elapsed<3000){
-      isl.beeOff={x:W,y:origOff.y};
-    } else if(elapsed<5500){
-      const p=(elapsed-3000)/2500;
-      isl.beeOff={x:W-p*(W+origOff.x+W/2),y:origOff.y-100+p*100};
+      isl._beeOff={x:origOff.x-p*W*0.6,y:origOff.y-p*80};
+    } else if(elapsed<4000){
+      isl._beeOff={x:W,y:origOff.y+60};
+    } else if(elapsed<6500){
+      const p=(elapsed-4000)/2500;
+      isl._beeOff={x:W*(1-p)*0.6+origOff.x*p,y:origOff.y+60-p*60};
     } else {
-      isl.beeOff={...origOff};
-      scoutT=0;
+      isl._beeOff=null;
+      scoutFlying=false;
       clearInterval(fly);
     }
   },50);
-},14000);
+},15000);
 
-// Load all assets then start
+// Override drawBee to support scout offset
+const _origDrawBee=drawBee;
+
+// Load assets then start
 async function init(){
   const loads=[];
   ISLANDS.forEach(isl=>{
-    loads.push(loadImg(isl.room, ROOMS+'/'+isl.room+'.png'));
-    if(isl.bee) loads.push(loadImg(isl.bee, ASSETS+'/'+isl.bee+'.png'));
+    loads.push(loadImg(isl.room,ROOMS_URL+'/'+isl.room+'.png'));
+    if(isl.bee) loads.push(loadImg(isl.bee,ASSETS+'/'+isl.bee+'.png'));
   });
   await Promise.all(loads);
   initMotes();
@@ -468,7 +522,7 @@ async function init(){
 }
 init();
 
-// ── HUD DATA ──
+// ── HUD ──
 const ADEFS=[
   {n:'auditor',p:1},{n:'bard',p:1},{n:'chancellor',p:1},{n:'engineer',p:1},
   {n:'forager',p:2},{n:'foreman',p:1},{n:'inspector',p:1},{n:'nurse',p:1},
@@ -479,7 +533,7 @@ const HCOLS={tax:'#e8403a',venture:'#4a9eff',reinvest:'#39d98a',profit:'#F4A825'
 const fmt=n=>'$'+(n||0).toFixed(2);
 
 function renderAgents(d){
-  const on=d?.agents?.online||[],si=d?.agents?.silent||[];
+  const on=d?.agents?.online||[];
   document.getElementById('agent-list').innerHTML=ADEFS.map(a=>{
     const isOn=on.includes(a.n),isP2=a.p===2&&!isOn;
     const cls=isOn?'on':isP2?'p2':'si';
@@ -532,17 +586,26 @@ function showDecree(d){
   decreeShown=true;
 }
 function closeDecree(){document.getElementById('decree-overlay').classList.remove('active');}
+
 setInterval(()=>{
   const n=new Date();
   document.getElementById('live-clock').textContent=
     String(n.getUTCHours()).padStart(2,'0')+':'+String(n.getUTCMinutes()).padStart(2,'0')+':'+String(n.getUTCSeconds()).padStart(2,'0');
 },1000);
+
 async function fetchData(){
-  try{const r=await fetch(API+'/hive-status',{cache:'no-store'});applyData(await r.json());
-    document.getElementById('sys-status').textContent='CHANCELLOR ONLINE';document.getElementById('sys-status').style.color='';}
-  catch(e){document.getElementById('sys-status').textContent='CHANCELLOR OFFLINE';document.getElementById('sys-status').style.color='var(--red)';}
+  try{
+    const r=await fetch(API+'/hive-status',{cache:'no-store'});
+    applyData(await r.json());
+    document.getElementById('sys-status').textContent='CHANCELLOR ONLINE';
+    document.getElementById('sys-status').style.color='';
+  }catch(e){
+    document.getElementById('sys-status').textContent='CHANCELLOR OFFLINE';
+    document.getElementById('sys-status').style.color='var(--red)';
+  }
 }
 fetchData();setInterval(fetchData,REFRESH);
+
 function toggleQ(){document.getElementById('qchat').classList.toggle('open');}
 async function sendQ(){
   const inp=document.getElementById('qinput'),msg=inp.value.trim();
@@ -555,7 +618,10 @@ async function sendQ(){
     const data=await r.json();document.getElementById('qt')?.remove();
     msgs.innerHTML+=`<div class="qmsg q">${(data.reply||data.error||'No response').replace(/\n/g,'<br>').replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')}</div>`;
     msgs.scrollTop=msgs.scrollHeight;
-  }catch(e){document.getElementById('qt')?.remove();msgs.innerHTML+=`<div class="qmsg q" style="color:var(--red)">Error: ${e.message}</div>`;}
+  }catch(e){
+    document.getElementById('qt')?.remove();
+    msgs.innerHTML+=`<div class="qmsg q" style="color:var(--red)">Error: ${e.message}</div>`;
+  }
 }
 </script>
 </body>
