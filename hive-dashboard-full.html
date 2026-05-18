@@ -3,1187 +3,929 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>🐝 The Hive — Command Center</title>
-<link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700&family=Cinzel:wght@400;600&family=Share+Tech+Mono&family=VT323&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/phaser/3.88.2/phaser.min.js"></script>
+<title>HIVE // Command</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Barlow+Condensed:wght@300;400;600;700;900&family=Barlow:wght@300;400&display=swap" rel="stylesheet">
 <style>
-* { margin:0; padding:0; box-sizing:border-box; }
+  :root {
+    --amber: #f5a623;
+    --amber-dim: #a86e10;
+    --amber-glow: rgba(245,166,35,0.15);
+    --amber-bright: #ffc84a;
+    --red: #e8403a;
+    --green: #39d98a;
+    --blue: #4a9eff;
+    --bg: #080a0d;
+    --bg2: #0d1017;
+    --bg3: #131820;
+    --bg4: #1a2130;
+    --border: rgba(245,166,35,0.2);
+    --border-bright: rgba(245,166,35,0.5);
+    --text: #c8d0dc;
+    --text-dim: #5a6478;
+    --mono: 'Share Tech Mono', monospace;
+    --head: 'Barlow Condensed', sans-serif;
+    --body: 'Barlow', sans-serif;
+  }
 
-:root {
-  --honey:     #F4A825;
-  --amber:     #E8821A;
-  --dark:      #08080f;
-  --panel:     rgba(12,12,24,0.92);
-  --border:    rgba(244,168,37,0.18);
-  --text:      rgba(255,255,255,0.82);
-  --dim:       rgba(255,255,255,0.28);
-  --green:     #5dba52;
-  --blue:      #40b0cc;
-  --red:       #cc3322;
-  --purple:    #8855cc;
-}
+  * { margin: 0; padding: 0; box-sizing: border-box; }
 
-body {
-  background: var(--dark);
-  font-family: 'Share Tech Mono', monospace;
-  overflow: hidden;
-  width: 100vw;
-  height: 100vh;
-}
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--body);
+    font-size: 14px;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
 
-/* ── Game Canvas ── */
-#game { position: fixed; inset: 0; z-index: 0; }
+  /* Scanline overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,0,0,0.08) 2px,
+      rgba(0,0,0,0.08) 4px
+    );
+    pointer-events: none;
+    z-index: 1000;
+  }
 
-/* ── Scanline overlay ── */
-body::after {
-  content: '';
-  position: fixed;
-  inset: 0;
-  background: repeating-linear-gradient(
-    0deg,
-    transparent,
-    transparent 2px,
-    rgba(0,0,0,0.04) 2px,
-    rgba(0,0,0,0.04) 4px
-  );
-  pointer-events: none;
-  z-index: 5;
-}
+  /* ── HEADER ── */
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 24px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg2);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
 
-/* ── HUD Layer ── */
-#hud {
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: 10;
-  display: grid;
-  grid-template-rows: 52px 1fr 200px;
-  grid-template-columns: 260px 1fr 260px;
-}
+  .logo {
+    font-family: var(--head);
+    font-size: 28px;
+    font-weight: 900;
+    letter-spacing: 6px;
+    color: var(--amber);
+    text-shadow: 0 0 20px rgba(245,166,35,0.4);
+  }
 
-/* ── Top Bar ── */
-#topbar {
-  grid-column: 1 / -1;
-  grid-row: 1;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 20px;
-  background: linear-gradient(180deg, rgba(8,8,15,0.98) 0%, transparent 100%);
-  border-bottom: 1px solid var(--border);
-  pointer-events: all;
-}
+  .logo span { color: var(--text-dim); font-weight: 300; }
 
-#logo {
-  font-family: 'Cinzel Decorative', serif;
-  font-size: 16px;
-  color: var(--honey);
-  text-shadow: 0 0 30px rgba(244,168,37,0.6);
-  letter-spacing: 4px;
-}
+  .header-meta {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+  }
 
-#topnav {
-  display: flex;
-  gap: 24px;
-  align-items: center;
-}
+  .timestamp-live {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-dim);
+  }
 
-.nav-item {
-  font-size: 10px;
-  letter-spacing: 2px;
-  color: var(--dim);
-  cursor: pointer;
-  transition: color 0.2s;
-  pointer-events: all;
-}
-.nav-item:hover, .nav-item.active { color: var(--honey); }
+  .pulse-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 8px var(--green);
+    animation: pulse 2s ease-in-out infinite;
+    display: inline-block;
+  }
 
-#clock {
-  font-family: 'VT323', monospace;
-  font-size: 26px;
-  color: rgba(244,168,37,0.6);
-  letter-spacing: 2px;
-}
+  @keyframes pulse {
+    0%, 100% { opacity: 1; box-shadow: 0 0 8px var(--green); }
+    50% { opacity: 0.4; box-shadow: 0 0 2px var(--green); }
+  }
 
-/* ── Left Panel ── */
-#left-panel {
-  grid-row: 2 / -1;
-  grid-column: 1;
-  padding: 16px 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  overflow-y: auto;
-  pointer-events: all;
-}
+  .refresh-btn {
+    font-family: var(--mono);
+    font-size: 11px;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--amber-dim);
+    padding: 4px 12px;
+    cursor: pointer;
+    letter-spacing: 2px;
+    transition: all 0.2s;
+  }
+  .refresh-btn:hover { border-color: var(--amber); color: var(--amber); }
 
-/* ── Right Panel ── */
-#right-panel {
-  grid-row: 2 / -1;
-  grid-column: 3;
-  padding: 16px 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  overflow-y: auto;
-  pointer-events: all;
-}
+  /* ── LAYOUT ── */
+  .grid {
+    display: grid;
+    grid-template-columns: 280px 1fr 280px;
+    grid-template-rows: auto auto auto;
+    gap: 1px;
+    background: var(--border);
+    min-height: calc(100vh - 57px);
+  }
 
-/* ── Bottom Center ── */
-#bottom-center {
-  grid-row: 3;
-  grid-column: 2;
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  padding: 0 20px 16px;
-  gap: 12px;
-  pointer-events: all;
-}
+  .panel {
+    background: var(--bg2);
+    padding: 20px;
+    position: relative;
+    overflow: hidden;
+  }
 
-/* ── Panel Cards ── */
-.card {
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 12px;
-  backdrop-filter: blur(12px);
-}
+  .panel::after {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--amber-dim), transparent);
+    opacity: 0.4;
+  }
 
-.card-title {
-  font-family: 'Cinzel', serif;
-  font-size: 9px;
-  letter-spacing: 3px;
-  color: rgba(244,168,37,0.5);
-  text-transform: uppercase;
-  margin-bottom: 10px;
-  padding-bottom: 6px;
-  border-bottom: 1px solid rgba(244,168,37,0.1);
-}
+  .panel-label {
+    font-family: var(--head);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 4px;
+    color: var(--amber-dim);
+    text-transform: uppercase;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
 
-/* ── Agent Rows ── */
-.agent-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 5px 0;
-  border-bottom: 1px solid rgba(255,255,255,0.04);
-  cursor: pointer;
-  transition: background 0.15s;
-  border-radius: 3px;
-  padding: 5px 4px;
-}
-.agent-row:hover { background: rgba(244,168,37,0.05); }
-.agent-row:last-child { border-bottom: none; }
+  .panel-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
 
-.a-icon { font-size: 14px; width: 20px; text-align: center; }
-.a-name { font-size: 11px; color: var(--text); flex: 1; }
-.a-role { font-size: 9px; color: var(--dim); }
+  /* ── RECOVERY BAR ── */
+  .recovery-panel {
+    grid-column: 1 / -1;
+    background: var(--bg2);
+    padding: 16px 24px;
+    display: flex;
+    align-items: center;
+    gap: 32px;
+    border-bottom: 1px solid var(--border);
+  }
 
-.badge {
-  font-size: 8px;
-  padding: 2px 7px;
-  border-radius: 10px;
-  letter-spacing: 0.5px;
-  font-weight: bold;
-  white-space: nowrap;
-}
-.badge-online  { background: rgba(93,186,82,0.15);  border: 1px solid #5dba52; color: #5dba52; }
-.badge-idle    { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.15); color: var(--dim); }
-.badge-active  { background: rgba(244,168,37,0.15); border: 1px solid var(--honey); color: var(--honey);
-                 animation: glow-pulse 2s infinite; }
-.badge-phase2  { background: rgba(136,85,204,0.12); border: 1px solid var(--purple); color: var(--purple); }
-.badge-warn    { background: rgba(204,51,34,0.15);  border: 1px solid var(--red);   color: var(--red); }
+  .recovery-label {
+    font-family: var(--head);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 4px;
+    color: var(--amber-dim);
+    white-space: nowrap;
+  }
 
-@keyframes glow-pulse {
-  0%,100% { opacity:1; box-shadow: 0 0 6px currentColor; }
-  50%      { opacity:0.6; box-shadow: none; }
-}
+  .recovery-bar-wrap {
+    flex: 1;
+    height: 6px;
+    background: var(--bg4);
+    border: 1px solid var(--border);
+    position: relative;
+    overflow: hidden;
+  }
 
-/* ── Metrics ── */
-.metrics-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 6px;
-}
+  .recovery-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--amber-dim), var(--amber));
+    transition: width 1s ease;
+    position: relative;
+  }
 
-.metric {
-  background: rgba(0,0,0,0.3);
-  border: 1px solid rgba(244,168,37,0.08);
-  border-radius: 4px;
-  padding: 8px 10px;
-}
-.metric-label {
-  font-size: 8px;
-  color: rgba(244,168,37,0.45);
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  margin-bottom: 3px;
-}
-.metric-value {
-  font-family: 'VT323', monospace;
-  font-size: 22px;
-  color: var(--honey);
-  line-height: 1;
-}
-.metric-value.green  { color: var(--green); }
-.metric-value.blue   { color: var(--blue); }
-.metric-value.dim    { color: var(--dim); font-size: 16px; }
+  .recovery-bar-fill::after {
+    content: '';
+    position: absolute;
+    right: 0; top: 0; bottom: 0;
+    width: 20px;
+    background: linear-gradient(90deg, transparent, rgba(255,200,74,0.6));
+    animation: shimmer 2s ease-in-out infinite;
+  }
 
-/* ── Honey Split Bar ── */
-.honey-bar {
-  display: flex;
-  height: 22px;
-  border-radius: 4px;
-  overflow: hidden;
-  margin: 8px 0 6px;
-}
-.hs { display:flex; align-items:center; justify-content:center;
-       font-size:8px; font-weight:bold; letter-spacing:0.5px; }
-.hs-tax   { background:#7a3a10; color:#ffaa66; flex:25; }
-.hs-vent  { background:#1a3a7a; color:#66aaff; flex:20; }
-.hs-maint { background:#1a5a1a; color:#66cc66; flex:18; }
-.hs-prof  { background:#c88010; color:#fff8e0; flex:37; }
+  @keyframes shimmer {
+    0%, 100% { opacity: 0.5; }
+    50% { opacity: 1; }
+  }
 
-.split-key {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 2px 8px;
-  margin-top: 4px;
-}
-.sk { display:flex; align-items:center; gap:4px; font-size:8px; color:var(--dim); }
-.sk-dot { width:6px; height:6px; border-radius:1px; flex-shrink:0; }
+  .recovery-stats {
+    display: flex;
+    gap: 24px;
+    align-items: center;
+  }
 
-/* ── Storage Bars ── */
-.stor { margin-bottom: 8px; }
-.stor-head { display:flex; justify-content:space-between;
-             font-size:9px; margin-bottom:3px; }
-.stor-name { color:var(--dim); }
-.stor-pct  { color:var(--honey); }
-.stor-track { height:5px; background:rgba(255,255,255,0.06); border-radius:3px; overflow:hidden; }
-.stor-fill  { height:100%; border-radius:3px; }
-.fill-g { background: linear-gradient(90deg, #2a5a1a, var(--green)); }
-.fill-y { background: linear-gradient(90deg, #7a5a00, var(--honey)); }
-.fill-r { background: linear-gradient(90deg, #5a1a0a, var(--red)); }
-.stor-sub { font-size:8px; color:rgba(255,255,255,0.2); margin-top:2px; }
+  .recovery-stat {
+    text-align: right;
+  }
 
-/* ── Print Status ── */
-.print-block {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 0;
-}
-.print-ico { font-size: 22px; }
-.print-info { flex:1; }
-.print-name { font-size:11px; color:var(--text); margin-bottom:5px; }
-.print-track { height:7px; background:rgba(255,255,255,0.06); border-radius:4px; overflow:hidden; }
-.print-fill  { height:100%; background: linear-gradient(90deg, var(--amber), var(--honey), #ffd700);
-               border-radius:4px; transition: width 1s ease; }
-.print-sub { font-size:9px; color:var(--dim); margin-top:3px; }
-.print-pct { font-family:'VT323',monospace; font-size:26px; color:var(--honey); }
+  .recovery-stat .val {
+    font-family: var(--mono);
+    font-size: 18px;
+    color: var(--amber);
+    line-height: 1;
+  }
 
-/* ── Event Ticker ── */
-#ticker-card {
-  flex: 1;
-  max-width: 420px;
-  min-width: 280px;
-}
+  .recovery-stat .lbl {
+    font-size: 10px;
+    color: var(--text-dim);
+    letter-spacing: 1px;
+  }
 
-.tick { display:flex; gap:8px; padding:4px 0;
-        border-bottom:1px solid rgba(255,255,255,0.04); }
-.tick:last-child { border-bottom:none; }
-.tick-ts { font-family:'VT323',monospace; font-size:13px;
-           color:rgba(244,168,37,0.35); white-space:nowrap; }
-.tick-txt { font-size:10px; color:rgba(255,255,255,0.55); line-height:1.4; }
+  /* ── FINANCIALS ── */
+  .fin-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
 
-/* ── Royal Decree ── */
-#decree {
-  position: fixed;
-  top: 60px; left: 50%;
-  transform: translateX(-50%) translateY(-20px);
-  width: 420px;
-  background: rgba(10,8,5,0.97);
-  border: 1px solid var(--honey);
-  border-radius: 8px;
-  padding: 18px 22px;
-  z-index: 100;
-  box-shadow: 0 0 60px rgba(244,168,37,0.3), 0 20px 40px rgba(0,0,0,0.6);
-  display: none;
-  pointer-events: all;
-  animation: decree-drop 0.35s cubic-bezier(0.34,1.56,0.64,1) forwards;
-}
-#decree.show { display: block; }
+  .fin-card {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    padding: 10px 12px;
+  }
 
-@keyframes decree-drop {
-  from { opacity:0; transform:translateX(-50%) translateY(-40px) scale(0.92); }
-  to   { opacity:1; transform:translateX(-50%) translateY(0) scale(1); }
-}
+  .fin-card .val {
+    font-family: var(--mono);
+    font-size: 20px;
+    color: var(--amber);
+    line-height: 1.1;
+  }
 
-.decree-crown {
-  text-align:center; font-size:28px; margin-bottom:8px;
-  animation: crown-spin 3s linear infinite;
-}
-@keyframes crown-spin {
-  0%,100% { text-shadow: 0 0 20px gold; }
-  50%      { text-shadow: 0 0 40px gold, 0 0 80px orange; }
-}
+  .fin-card .val.green { color: var(--green); }
+  .fin-card .lbl {
+    font-size: 10px;
+    color: var(--text-dim);
+    letter-spacing: 1px;
+    margin-top: 3px;
+    text-transform: uppercase;
+  }
 
-.decree-head {
-  font-family:'Cinzel',serif; font-size:13px; color:var(--honey);
-  text-align:center; letter-spacing:3px; margin-bottom:12px;
-}
+  /* Honey Split */
+  .honey-split {
+    margin-top: 14px;
+  }
 
-.decree-body { font-size:11px; color:var(--text); line-height:1.7; margin-bottom:16px; }
-.decree-id   { font-size:9px; color:var(--dim); margin-top:4px; }
+  .honey-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 5px 0;
+    border-bottom: 1px solid rgba(245,166,35,0.08);
+    font-size: 12px;
+  }
 
-.decree-btns { display:flex; gap:10px; }
-.dbtn {
-  flex:1; padding:9px; border-radius:5px; border:none;
-  font-family:'Cinzel',serif; font-size:11px; cursor:pointer;
-  transition:all 0.2s; pointer-events:all;
-}
-.dbtn-approve { background:rgba(93,186,82,0.15); border:1px solid var(--green); color:var(--green); }
-.dbtn-approve:hover { background:rgba(93,186,82,0.3); box-shadow:0 0 20px rgba(93,186,82,0.3); }
-.dbtn-deny    { background:rgba(204,51,34,0.1); border:1px solid var(--red); color:var(--red); }
-.dbtn-deny:hover { background:rgba(204,51,34,0.25); }
+  .honey-row .name { color: var(--text-dim); text-transform: uppercase; letter-spacing: 1px; font-size: 10px; }
+  .honey-row .amt { font-family: var(--mono); color: var(--amber); }
 
-/* ── Scrollbar ── */
-::-webkit-scrollbar { width:3px; }
-::-webkit-scrollbar-track { background:transparent; }
-::-webkit-scrollbar-thumb { background:rgba(244,168,37,0.2); border-radius:2px; }
+  /* ── MARKET + DECREE ── */
+  .market-niche {
+    font-family: var(--head);
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text);
+    line-height: 1.2;
+    margin-bottom: 14px;
+    letter-spacing: 0.5px;
+  }
 
-/* ── Phase divider ── */
-.phase-label {
-  font-size:8px; letter-spacing:2px; color:rgba(244,168,37,0.25);
-  text-transform:uppercase; padding:6px 0 4px; margin-top:2px;
-}
+  .vigor-block {
+    display: flex;
+    align-items: flex-end;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  .vigor-num {
+    font-family: var(--mono);
+    font-size: 48px;
+    color: var(--amber-bright);
+    line-height: 1;
+    text-shadow: 0 0 30px rgba(245,166,35,0.4);
+  }
+
+  .vigor-meta { padding-bottom: 6px; }
+  .vigor-meta .label { font-size: 10px; color: var(--text-dim); letter-spacing: 2px; text-transform: uppercase; }
+  .vigor-bars { display: flex; gap: 3px; margin-top: 4px; }
+  .vigor-bar {
+    width: 14px; height: 20px;
+    background: var(--bg4);
+    border: 1px solid var(--border);
+    transition: all 0.5s;
+  }
+  .vigor-bar.lit { background: var(--amber); border-color: var(--amber-bright); }
+  .vigor-bar.lit-bright { background: var(--amber-bright); box-shadow: 0 0 6px var(--amber); }
+
+  .market-tags {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+  }
+
+  .tag {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 2px;
+    padding: 4px 10px;
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    text-transform: uppercase;
+  }
+
+  .tag.green { border-color: rgba(57,217,138,0.4); color: var(--green); }
+  .tag.blue { border-color: rgba(74,158,255,0.4); color: var(--blue); }
+  .tag.amber { border-color: var(--border-bright); color: var(--amber); }
+
+  /* Decree */
+  .decree-verdict {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+
+  .verdict-badge {
+    font-family: var(--head);
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 4px;
+    padding: 6px 16px;
+    text-transform: uppercase;
+  }
+
+  .verdict-badge.approved {
+    background: rgba(57,217,138,0.12);
+    border: 1px solid rgba(57,217,138,0.5);
+    color: var(--green);
+  }
+
+  .verdict-badge.rejected {
+    background: rgba(232,64,58,0.12);
+    border: 1px solid rgba(232,64,58,0.5);
+    color: var(--red);
+  }
+
+  .decree-reasoning {
+    font-size: 12px;
+    color: var(--text-dim);
+    line-height: 1.6;
+    border-left: 2px solid var(--border-bright);
+    padding-left: 10px;
+    margin-bottom: 12px;
+    font-style: italic;
+  }
+
+  .decree-meta {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px;
+  }
+
+  .dmeta {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    padding: 8px 10px;
+    text-align: center;
+  }
+
+  .dmeta .val { font-family: var(--mono); font-size: 14px; color: var(--amber); }
+  .dmeta .lbl { font-size: 9px; color: var(--text-dim); letter-spacing: 1px; text-transform: uppercase; margin-top: 2px; }
+
+  /* ── AGENTS ── */
+  .agents-panel { grid-row: span 2; }
+
+  .agent-list { display: flex; flex-direction: column; gap: 4px; }
+
+  .agent-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    background: var(--bg3);
+    border: 1px solid transparent;
+    transition: all 0.2s;
+    cursor: default;
+  }
+
+  .agent-row.online {
+    border-color: rgba(57,217,138,0.2);
+    background: rgba(57,217,138,0.04);
+  }
+
+  .agent-row:hover { border-color: var(--border); }
+
+  .agent-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .agent-dot.online { background: var(--green); box-shadow: 0 0 6px var(--green); }
+  .agent-dot.silent { background: var(--text-dim); }
+
+  .agent-name {
+    font-family: var(--mono);
+    font-size: 11px;
+    text-transform: lowercase;
+    flex: 1;
+    color: var(--text-dim);
+  }
+
+  .agent-row.online .agent-name { color: var(--text); }
+
+  .agent-status {
+    font-size: 9px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+  }
+
+  .agent-row.online .agent-status { color: var(--green); }
+
+  .agent-summary {
+    display: flex;
+    justify-content: space-between;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-bottom: 12px;
+    padding: 6px 10px;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+  }
+
+  .agent-summary .on { color: var(--green); }
+  .agent-summary .si { color: var(--text-dim); }
+
+  /* ── ACTIVITY FEED ── */
+  .activity-feed { display: flex; flex-direction: column; gap: 6px; }
+
+  .activity-item {
+    display: flex;
+    gap: 10px;
+    padding: 8px 10px;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    align-items: flex-start;
+    animation: fadeIn 0.5s ease;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-4px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .activity-agent {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--amber);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    white-space: nowrap;
+    min-width: 60px;
+  }
+
+  .activity-text {
+    font-size: 11px;
+    color: var(--text-dim);
+    line-height: 1.4;
+  }
+
+  /* ── SYSTEM STATUS ── */
+  .sys-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+
+  .sys-card {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    padding: 8px 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .sys-name { font-family: var(--mono); font-size: 11px; color: var(--text-dim); }
+  .sys-status { font-size: 9px; letter-spacing: 2px; text-transform: uppercase; }
+  .sys-status.online { color: var(--green); }
+  .sys-status.offline { color: var(--red); }
+
+  /* ── STORAGE ── */
+  .storage-item { margin-bottom: 12px; }
+  .storage-header {
+    display: flex;
+    justify-content: space-between;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-bottom: 5px;
+  }
+  .storage-header .name { color: var(--text); }
+  .storage-bar-wrap {
+    height: 4px;
+    background: var(--bg4);
+    border: 1px solid var(--border);
+    overflow: hidden;
+  }
+  .storage-bar-fill {
+    height: 100%;
+    background: var(--amber-dim);
+    transition: width 1s ease;
+  }
+  .storage-bar-fill.warn { background: var(--red); }
+
+  /* ── QUEUE ── */
+  .queue-block {
+    display: flex;
+    gap: 10px;
+    margin-top: 12px;
+  }
+  .queue-card {
+    flex: 1;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    padding: 10px;
+    text-align: center;
+  }
+  .queue-card .val { font-family: var(--mono); font-size: 28px; color: var(--amber); line-height: 1; }
+  .queue-card .lbl { font-size: 9px; color: var(--text-dim); letter-spacing: 2px; text-transform: uppercase; margin-top: 4px; }
+
+  /* ── ERROR STATE ── */
+  .error-notice {
+    background: rgba(232,64,58,0.08);
+    border: 1px solid rgba(232,64,58,0.3);
+    color: var(--red);
+    padding: 8px 12px;
+    font-family: var(--mono);
+    font-size: 11px;
+    margin-bottom: 12px;
+    display: none;
+  }
+
+  /* Loading */
+  .loading { color: var(--text-dim); font-family: var(--mono); font-size: 11px; animation: blink 1s step-end infinite; }
+  @keyframes blink { 50% { opacity: 0; } }
+
+  /* ── CHANCELLOR FIX NOTE ── */
+  .fix-badge {
+    position: fixed;
+    bottom: 16px;
+    right: 16px;
+    background: var(--bg2);
+    border: 1px solid var(--amber-dim);
+    padding: 6px 12px;
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--amber-dim);
+    letter-spacing: 1px;
+    z-index: 200;
+    display: none;
+  }
+
+  .span-2 { grid-column: span 2; }
 </style>
 </head>
 <body>
 
-<!-- Phaser Canvas -->
-<div id="game"></div>
-
-<!-- Royal Decree Overlay -->
-<div id="decree">
-  <div class="decree-crown">👑</div>
-  <div class="decree-head">ROYAL DECREE</div>
-  <div class="decree-body" id="decree-body">
-    Worker Bee requests deployment of <strong>e-Reader Wide-Aperture Slab Shrine</strong> batch (5 units).<br>
-    Estimated cost: <strong>$0.08</strong> · Filament: Marble White PLA · Est. time: 8.75hrs
-    <div class="decree-id">Decree ID: DEC-A1B2C3D4 · Agent: worker-01</div>
+<header>
+  <div class="logo">HIVE <span>// COMMAND</span></div>
+  <div class="header-meta">
+    <div class="timestamp-live" id="ts-display">--</div>
+    <span class="pulse-dot" id="live-dot" style="background:var(--text-dim);box-shadow:none"></span>
+    <button class="refresh-btn" onclick="fetchStatus()">↺ REFRESH</button>
   </div>
-  <div class="decree-btns">
-    <button class="dbtn dbtn-approve" onclick="resolveDecree('APPROVE')">✓ APPROVE</button>
-    <button class="dbtn dbtn-deny" onclick="resolveDecree('DENY')">✗ DENY</button>
+</header>
+
+<!-- RECOVERY BAR -->
+<div class="recovery-panel">
+  <div class="recovery-label">⬡ RECOVERY</div>
+  <div class="recovery-bar-wrap">
+    <div class="recovery-bar-fill" id="recovery-bar" style="width:0%"></div>
+  </div>
+  <div class="recovery-stats">
+    <div class="recovery-stat">
+      <div class="val" id="recovery-usd">$—</div>
+      <div class="lbl">RECOVERED</div>
+    </div>
+    <div class="recovery-stat">
+      <div class="val" id="recovery-target" style="color:var(--text-dim)">$—</div>
+      <div class="lbl">TARGET</div>
+    </div>
+    <div class="recovery-stat">
+      <div class="val" id="recovery-pct">—%</div>
+      <div class="lbl">COMPLETE</div>
+    </div>
   </div>
 </div>
 
-<!-- HUD -->
-<div id="hud">
+<div class="grid">
 
-  <!-- Top Bar -->
-  <div id="topbar">
-    <div id="logo">🐝 THE HIVE</div>
-    <div id="topnav">
-      <div class="nav-item active">COMMAND</div>
-      <div class="nav-item">FINANCE</div>
-      <div class="nav-item">MARKET</div>
-      <div class="nav-item">SECURITY</div>
-      <div class="nav-item">LOGS</div>
+  <!-- LEFT: FINANCIALS -->
+  <div class="panel">
+    <div class="panel-label">Financial</div>
+    <div class="error-notice" id="fin-error">No financial data</div>
+    <div class="fin-grid">
+      <div class="fin-card">
+        <div class="val" id="rev-today">$—</div>
+        <div class="lbl">Today</div>
+      </div>
+      <div class="fin-card">
+        <div class="val" id="rev-mtd">$—</div>
+        <div class="lbl">MTD</div>
+      </div>
+      <div class="fin-card">
+        <div class="val" id="gross-all">$—</div>
+        <div class="lbl">Gross All-Time</div>
+      </div>
+      <div class="fin-card">
+        <div class="val green" id="net-profit">$—</div>
+        <div class="lbl">Net Profit</div>
+      </div>
     </div>
-    <div id="clock">--:--:--</div>
+
+    <div class="honey-split">
+      <div class="panel-label" style="margin-top:14px">⬡ Honey Split</div>
+      <div class="honey-row"><span class="name">Tax</span><span class="amt" id="hs-tax">$—</span></div>
+      <div class="honey-row"><span class="name">Venture</span><span class="amt" id="hs-venture">$—</span></div>
+      <div class="honey-row"><span class="name">Reinvest</span><span class="amt" id="hs-reinvest">$—</span></div>
+      <div class="honey-row"><span class="name">Profit</span><span class="amt" id="hs-profit">$—</span></div>
+      <div class="honey-row"><span class="name">Chancellor</span><span class="amt" id="hs-chancellor">$—</span></div>
+    </div>
   </div>
 
-  <!-- Left Panel -->
-  <div id="left-panel">
+  <!-- CENTER: MARKET + DECREE -->
+  <div class="panel">
+    <div class="panel-label">Market Signal</div>
+    <div class="market-niche" id="market-niche"><span class="loading">scanning...</span></div>
 
-    <!-- Phase 1 Agents -->
-    <div class="card">
-      <div class="card-title">Infrastructure</div>
-      <div class="phase-label">Phase 1 — Active</div>
-
-      <div class="agent-row">
-        <div class="a-icon">🏥</div>
-        <div class="a-name">Nurse</div>
-        <div class="a-role">Briefings</div>
-        <div class="badge badge-online">ONLINE</div>
-      </div>
-      <div class="agent-row">
-        <div class="a-icon">🛡️</div>
-        <div class="a-name">Supervisor</div>
-        <div class="a-role">Security</div>
-        <div class="badge badge-online">ONLINE</div>
-      </div>
-      <div class="agent-row">
-        <div class="a-icon">⚖️</div>
-        <div class="a-name">Chancellor</div>
-        <div class="a-role">Finance</div>
-        <div class="badge badge-online">ONLINE</div>
-      </div>
-      <div class="agent-row">
-        <div class="a-icon">🖨️</div>
-        <div class="a-name">Foreman</div>
-        <div class="a-role">A1 Mini Bridge</div>
-        <div class="badge badge-active">PRINTING</div>
-      </div>
-      <div class="agent-row">
-        <div class="a-icon">🔬</div>
-        <div class="a-name">Inspector</div>
-        <div class="a-role">STL Gate</div>
-        <div class="badge badge-idle">IDLE</div>
-      </div>
-      <div class="agent-row">
-        <div class="a-icon">📦</div>
-        <div class="a-name">Quartermaster</div>
-        <div class="a-role">Filament</div>
-        <div class="badge badge-idle">IDLE</div>
-      </div>
-      <div class="agent-row">
-        <div class="a-icon">🔧</div>
-        <div class="a-name">Engineer</div>
-        <div class="a-role">OpenSCAD</div>
-        <div class="badge badge-idle">IDLE</div>
+    <div class="vigor-block">
+      <div class="vigor-num" id="vigor-num">—</div>
+      <div class="vigor-meta">
+        <div class="label">Vigor Score / 10</div>
+        <div class="vigor-bars" id="vigor-bars"></div>
       </div>
     </div>
 
-    <!-- Intelligence -->
-    <div class="card">
-      <div class="card-title">Intelligence</div>
+    <div class="market-tags" id="market-tags"></div>
 
-      <div class="agent-row">
-        <div class="a-icon">👑</div>
-        <div class="a-name">Queen</div>
-        <div class="a-role">Strategy</div>
-        <div class="badge badge-active">DECREE</div>
+    <div class="panel-label" style="margin-top:20px">Decree</div>
+    <div class="decree-verdict">
+      <div class="verdict-badge" id="decree-badge">—</div>
+    </div>
+    <div class="decree-reasoning" id="decree-reasoning"><span class="loading">awaiting decree...</span></div>
+    <div class="decree-meta">
+      <div class="dmeta">
+        <div class="val" id="decree-worker">—</div>
+        <div class="lbl">Worker</div>
       </div>
-      <div class="agent-row">
-        <div class="a-icon">🔍</div>
-        <div class="a-name">Scout</div>
-        <div class="a-role">Etsy / eBay</div>
-        <div class="badge badge-active">SCANNING</div>
+      <div class="dmeta">
+        <div class="val" id="decree-spend">$—</div>
+        <div class="lbl">Budget</div>
       </div>
-      <div class="agent-row">
-        <div class="a-icon">🐝</div>
-        <div class="a-name">Worker</div>
-        <div class="a-role">Listings</div>
-        <div class="badge badge-idle">IDLE</div>
-      </div>
-      <div class="agent-row">
-        <div class="a-icon">🔒</div>
-        <div class="a-name">Warden</div>
-        <div class="a-role">Code Audit</div>
-        <div class="badge badge-idle">IDLE</div>
-      </div>
-      <div class="agent-row">
-        <div class="a-icon">🧾</div>
-        <div class="a-name">Auditor</div>
-        <div class="a-role">P&L</div>
-        <div class="badge badge-idle">IDLE</div>
-      </div>
-      <div class="agent-row">
-        <div class="a-icon">🎵</div>
-        <div class="a-name">Bard</div>
-        <div class="a-role">Content</div>
-        <div class="badge badge-idle">IDLE</div>
-      </div>
-
-      <div class="phase-label" style="margin-top:8px;">Phase 2 — Deferred</div>
-      <div class="agent-row">
-        <div class="a-icon">📈</div>
-        <div class="a-name">Forager</div>
-        <div class="a-role">Markets</div>
-        <div class="badge badge-phase2">PHASE 2</div>
-      </div>
-      <div class="agent-row">
-        <div class="a-icon">💰</div>
-        <div class="a-name">Treasurer</div>
-        <div class="a-role">Portfolio</div>
-        <div class="badge badge-phase2">PHASE 2</div>
-      </div>
-      <div class="agent-row">
-        <div class="a-icon">🎩</div>
-        <div class="a-name">Concierge</div>
-        <div class="a-role">Support</div>
-        <div class="badge badge-phase2">PHASE 2</div>
+      <div class="dmeta">
+        <div class="val" id="decree-model">—</div>
+        <div class="lbl">Model</div>
       </div>
     </div>
-
   </div>
 
-  <!-- Right Panel -->
-  <div id="right-panel">
-
-    <!-- Chancellor -->
-    <div class="card">
-      <div class="card-title">Chancellor Ledger</div>
-      <div class="metrics-grid">
-        <div class="metric">
-          <div class="metric-label">Revenue Today</div>
-          <div class="metric-value" id="m-today">$0.00</div>
-        </div>
-        <div class="metric">
-          <div class="metric-label">MTD Revenue</div>
-          <div class="metric-value green">$0.00</div>
-        </div>
-        <div class="metric">
-          <div class="metric-label">API Spend</div>
-          <div class="metric-value" id="m-spend">$0.00</div>
-        </div>
-        <div class="metric">
-          <div class="metric-label">Tax Reserve</div>
-          <div class="metric-value blue">$0.00</div>
-        </div>
-        <div class="metric">
-          <div class="metric-label">Net Profit</div>
-          <div class="metric-value green">$0.00</div>
-        </div>
-        <div class="metric">
-          <div class="metric-label">Decrees</div>
-          <div class="metric-value dim" id="m-decrees">1 pending</div>
-        </div>
-      </div>
-
-      <div style="margin-top:10px;">
-        <div class="card-title" style="border:none;margin-bottom:4px;">Honey Split</div>
-        <div class="honey-bar">
-          <div class="hs hs-tax">25%</div>
-          <div class="hs hs-vent">20%</div>
-          <div class="hs hs-maint">18%</div>
-          <div class="hs hs-prof">37%</div>
-        </div>
-        <div class="split-key">
-          <div class="sk"><div class="sk-dot" style="background:#7a3a10"></div>Tax 25%</div>
-          <div class="sk"><div class="sk-dot" style="background:#1a3a7a"></div>Venture 20%</div>
-          <div class="sk"><div class="sk-dot" style="background:#1a5a1a"></div>Maint 18%</div>
-          <div class="sk"><div class="sk-dot" style="background:#c88010"></div>Profit 37%</div>
-        </div>
-      </div>
+  <!-- RIGHT: AGENTS -->
+  <div class="panel agents-panel">
+    <div class="panel-label">Agents</div>
+    <div class="agent-summary">
+      <span>ONLINE <span class="on" id="agents-online-count">—</span></span>
+      <span>SILENT <span class="si" id="agents-silent-count">—</span></span>
+      <span>TOTAL <span id="agents-total">—</span></span>
     </div>
-
-    <!-- Manufacturing -->
-    <div class="card">
-      <div class="card-title">Manufacturing</div>
-      <div class="print-block">
-        <div class="print-ico">🖨️</div>
-        <div class="print-info">
-          <div class="print-name" id="print-name">ereader-shrine-v1.stl</div>
-          <div class="print-track">
-            <div class="print-fill" id="print-fill" style="width:34%"></div>
-          </div>
-          <div class="print-sub" id="print-sub">~2h 18m remaining · Marble White PLA</div>
-        </div>
-        <div class="print-pct" id="print-pct">34%</div>
-      </div>
-
-      <div style="height:1px;background:rgba(255,255,255,0.05);margin:6px 0;"></div>
-
-      <div class="metrics-grid">
-        <div class="metric">
-          <div class="metric-label">Confidence</div>
-          <div class="metric-value green">85/100</div>
-        </div>
-        <div class="metric">
-          <div class="metric-label">Prints Today</div>
-          <div class="metric-value dim">0</div>
-        </div>
-        <div class="metric">
-          <div class="metric-label">Marble White</div>
-          <div class="metric-value dim">1000g</div>
-        </div>
-        <div class="metric">
-          <div class="metric-label">Matte Black</div>
-          <div class="metric-value dim">1000g</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Storage -->
-    <div class="card">
-      <div class="card-title">Storage Monitor</div>
-      <div class="stor">
-        <div class="stor-head">
-          <span class="stor-name">SSD — OS + Docker</span>
-          <span class="stor-pct">12%</span>
-        </div>
-        <div class="stor-track">
-          <div class="stor-fill fill-g" style="width:12%"></div>
-        </div>
-        <div class="stor-sub">440 GB free · 500 GB total</div>
-      </div>
-      <div class="stor">
-        <div class="stor-head">
-          <span class="stor-name">HDD1 — Active Storage</span>
-          <span class="stor-pct">2%</span>
-        </div>
-        <div class="stor-track">
-          <div class="stor-fill fill-g" style="width:2%"></div>
-        </div>
-        <div class="stor-sub">3.92 TB free · 4 TB total</div>
-      </div>
-      <div class="stor">
-        <div class="stor-head">
-          <span class="stor-name">HDD2 — Backup Mirror</span>
-          <span class="stor-pct">1%</span>
-        </div>
-        <div class="stor-track">
-          <div class="stor-fill fill-g" style="width:1%"></div>
-        </div>
-        <div class="stor-sub">3.96 TB free · 4 TB total · Last backup: Never</div>
-      </div>
-    </div>
-
+    <div class="agent-list" id="agent-list"><div class="loading">loading agents...</div></div>
   </div>
 
-  <!-- Bottom Center — Ticker + Quick Stats -->
-  <div id="bottom-center">
+  <!-- BOTTOM LEFT: SYSTEM + STORAGE + QUEUE -->
+  <div class="panel">
+    <div class="panel-label">System</div>
+    <div class="sys-grid" id="sys-grid"></div>
 
-    <div class="card" style="min-width:180px;">
-      <div class="card-title">System</div>
-      <div class="metrics-grid" style="grid-template-columns:1fr;">
-        <div class="metric">
-          <div class="metric-label">Security</div>
-          <div class="metric-value green" style="font-size:14px;">🟢 GREEN</div>
-        </div>
-        <div class="metric">
-          <div class="metric-label">Power</div>
-          <div class="metric-value green" style="font-size:14px;">⚡ ONLINE</div>
-        </div>
-        <div class="metric">
-          <div class="metric-label">Network</div>
-          <div class="metric-value green" style="font-size:14px;">📡 LAN</div>
-        </div>
+    <div class="panel-label" style="margin-top:16px">Storage</div>
+    <div id="storage-block"></div>
+
+    <div class="panel-label" style="margin-top:16px">Queue</div>
+    <div class="queue-block">
+      <div class="queue-card">
+        <div class="val" id="q-pending">—</div>
+        <div class="lbl">Pending</div>
+      </div>
+      <div class="queue-card">
+        <div class="val" id="q-total">—</div>
+        <div class="lbl">Total</div>
       </div>
     </div>
-
-    <div class="card" id="ticker-card">
-      <div class="card-title">Activity Feed</div>
-      <div id="ticker"></div>
-    </div>
-
-    <div class="card" style="min-width:180px;">
-      <div class="card-title">Market Signal</div>
-      <div class="metric" style="margin-bottom:6px;">
-        <div class="metric-label">Scout Vigor</div>
-        <div class="metric-value" style="color:var(--honey);">8.4 / 10</div>
-      </div>
-      <div class="metric" style="margin-bottom:6px;">
-        <div class="metric-label">Top Niche</div>
-        <div class="metric-value dim" style="font-size:11px;line-height:1.3;">e-Reader<br>Shrine</div>
-      </div>
-      <div class="metric">
-        <div class="metric-label">$/hr Target</div>
-        <div class="metric-value green">$6.57</div>
-      </div>
-    </div>
-
   </div>
 
-</div><!-- end hud -->
+  <!-- BOTTOM CENTER: ACTIVITY -->
+  <div class="panel span-2">
+    <div class="panel-label">Activity Feed</div>
+    <div class="activity-feed" id="activity-feed"><div class="loading">loading activity...</div></div>
+  </div>
+
+</div>
+
+<div class="fix-badge" id="fix-badge">⚠ STALE DATA</div>
 
 <script>
-// ── Clock ─────────────────────────────────────────────────────────────────────
-function tick() {
-  const n = new Date();
-  document.getElementById('clock').textContent =
-    [n.getHours(),n.getMinutes(),n.getSeconds()]
-    .map(v=>String(v).padStart(2,'0')).join(':');
-}
-setInterval(tick,1000); tick();
+const ENDPOINT = 'http://192.168.50.10:8001/hive-status';
+const REFRESH_MS = 30000;
+let lastFetch = null;
 
-// ── Ticker ────────────────────────────────────────────────────────────────────
-const EVENTS = [
-  {t:'06:00', txt:'🏥 Nurse morning briefing complete — all systems nominal'},
-  {t:'06:30', txt:'📈 Forager: SOL +2.1% — market signal: neutral'},
-  {t:'07:00', txt:'🔍 Scout initiated — scanning e-Reader niche on Etsy'},
-  {t:'07:43', txt:'🔍 Scout waggle dance: vigor 8.4 — e-Reader Wide-Aperture'},
-  {t:'08:00', txt:'👑 Queen evaluating waggle dance report DEC-A1B2C3D4'},
-  {t:'08:12', txt:'🔬 Inspector: ereader-shrine-v1.stl — APPROVED (manifold clean)'},
-  {t:'08:15', txt:'🖨️ Foreman: print dispatched — confidence 85/100'},
-  {t:'08:16', txt:'🖨️ Foreman: A1 Mini connected — Marble White PLA confirmed'},
-];
-
-function buildTicker() {
-  const el = document.getElementById('ticker');
-  el.innerHTML = '';
-  [...EVENTS].reverse().forEach(e => {
-    const d = document.createElement('div');
-    d.className = 'tick';
-    d.innerHTML = `<span class="tick-ts">${e.t}</span><span class="tick-txt">${e.txt}</span>`;
-    el.appendChild(d);
-  });
-}
-buildTicker();
-
-function addTick(txt) {
-  const n = new Date();
-  const ts = [n.getHours(),n.getMinutes()].map(v=>String(v).padStart(2,'0')).join(':');
-  EVENTS.push({t:ts,txt});
-  buildTicker();
+function fmt(n, prefix='$') {
+  if (n === undefined || n === null) return '—';
+  return prefix + Number(n).toFixed(2);
 }
 
-// ── Print Progress Animation ───────────────────────────────────────────────────
-let pct = 34;
-setInterval(() => {
-  if(pct < 100) {
-    pct = Math.min(100, pct + 0.05);
-    document.getElementById('print-fill').style.width = pct.toFixed(1) + '%';
-    document.getElementById('print-pct').textContent = Math.floor(pct) + '%';
-    const rem = Math.max(0, Math.round((100-pct) * 2.1));
-    document.getElementById('print-sub').textContent =
-      `~${Math.floor(rem/60)}h ${rem%60}m remaining · Marble White PLA`;
-  }
-}, 1000);
-
-// ── Royal Decree ───────────────────────────────────────────────────────────────
-setTimeout(() => {
-  document.getElementById('decree').classList.add('show');
-  addTick('👑 ROYAL DECREE DEC-A1B2C3D4 — awaiting your stamp');
-}, 3000);
-
-function resolveDecree(decision) {
-  document.getElementById('decree').classList.remove('show');
-  const emoji = decision === 'APPROVE' ? '✅' : '❌';
-  addTick(`${emoji} Decree DEC-A1B2C3D4 ${decision.toLowerCase()}d by Architect`);
-  if(decision === 'APPROVE') {
-    setTimeout(() => addTick('🐝 Worker: generating 5 e-Reader listing drafts'), 2000);
-  }
+function fmtPct(n) {
+  if (n === undefined || n === null) return '—%';
+  return Number(n).toFixed(1) + '%';
 }
 
-// ── Nav ───────────────────────────────────────────────────────────────────────
-document.querySelectorAll('.nav-item').forEach(el => {
-  el.addEventListener('click', () => {
-    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-    el.classList.add('active');
-  });
-});
-
-// ── PHASER ISOMETRIC WORLD ────────────────────────────────────────────────────
-const W = window.innerWidth, H = window.innerHeight;
-
-class HiveScene extends Phaser.Scene {
-  constructor() { super('HiveScene'); }
-
-  create() {
-    const cx = W/2, cy = H/2 - 20;
-
-    // Sky gradient
-    const sky = this.add.graphics();
-    sky.fillGradientStyle(0x050510,0x050510,0x0a1030,0x0a1030,1);
-    sky.fillRect(0,0,W,H);
-
-    // Stars
-    for(let i=0;i<180;i++){
-      const x=Phaser.Math.Between(0,W), y=Phaser.Math.Between(0,H*0.65);
-      const r=Math.random()*1.5+0.3;
-      const s=this.add.circle(x,y,r,0xffffff,Math.random()*0.6+0.2);
-      this.tweens.add({targets:s,alpha:{from:s.alpha,to:s.alpha*0.1},
-        duration:Phaser.Math.Between(1500,5000),yoyo:true,repeat:-1,
-        delay:Phaser.Math.Between(0,4000)});
-    }
-
-    // Ambient horizon glow
-    const glow = this.add.graphics();
-    glow.fillGradientStyle(0x050510,0x050510,0xc85010,0xc85010,0,0,0.06,0.06);
-    glow.fillRect(0,H*0.5,W,H*0.5);
-
-    // World container
-    this.world = this.add.container(cx, cy-40);
-
-    // Draw islands
-    this.drawIslands();
-    this.drawBridges();
-    this.drawNurseGarden();
-    this.spawnBees();
-    this.spawnParticles();
-
-    // Gentle world breathe
-    this.t = 0;
+function renderVigorBars(vigor) {
+  const bars = document.getElementById('vigor-bars');
+  const v = Math.round(vigor);
+  let html = '';
+  for (let i = 1; i <= 10; i++) {
+    let cls = '';
+    if (i <= v && i === 10) cls = 'lit-bright';
+    else if (i <= v) cls = (i >= 8) ? 'lit-bright' : 'lit';
+    html += `<div class="vigor-bar ${cls}"></div>`;
   }
-
-  drawIslands() {
-    const islands = [
-      // Queen — center, tallest
-      {x:0,   y:-10,  w:170,d:130,h:85, top:0xF4A825,side:0xC87010,dark:0x8B4A00, label:'👑 Queen',    role:'Strategy'},
-      // Research — NE
-      {x:230, y:-130, w:140,d:110,h:60, top:0x4a6a3a,side:0x5a5a48,dark:0x3a3a30, label:'🔍 Research',  role:'Scout'},
-      // Wealth — NW
-      {x:-230,y:-130, w:140,d:110,h:55, top:0x5a6a3a,side:0x6a5a38,dark:0x4a3a20, label:'📈 Wealth',    role:'Forager'},
-      // Chancellor — SW
-      {x:-230,y:110,  w:130,d:105,h:52, top:0x706050,side:0x5a4a38,dark:0x3a3020, label:'⚖️ Finance',   role:'Chancellor'},
-      // Workshop — SE
-      {x:230, y:110,  w:130,d:105,h:55, top:0x504030,side:0x403020,dark:0x2a2015, label:'🏗️ Workshop',  role:'Foreman'},
-      // Security — E
-      {x:380, y:-10,  w:115,d:95, h:58, top:0x303050,side:0x252540,dark:0x181828, label:'🛡️ Security',  role:'Warden'},
-    ];
-
-    this.islandData = islands;
-
-    islands.forEach((isl,i) => {
-      const g = this.add.graphics();
-      this.drawIsoBox(g, isl.x, isl.y, isl.w, isl.d, isl.h,
-                      isl.top, isl.side, isl.dark);
-      this.drawStructure(g, isl, i);
-
-      // Label
-      const lbl = this.add.text(isl.x, isl.y - isl.h - 22, isl.label, {
-        fontFamily:'Cinzel', fontSize:'11px', color:'#F4A825',
-        stroke:'#000', strokeThickness:3, alpha:0.85
-      }).setOrigin(0.5,1);
-
-      this.tweens.add({targets:lbl, y:lbl.y-5, duration:2000+i*300,
-        yoyo:true, repeat:-1, ease:'Sine.easeInOut'});
-
-      this.world.add([g, lbl]);
-    });
-  }
-
-  drawIsoBox(g, x, y, w, d, h, topC, sideC, darkC) {
-    const hw=w/2, hd=d/2;
-
-    // Top face
-    g.fillStyle(topC,1);
-    g.beginPath();
-    g.moveTo(x,    y-h);
-    g.lineTo(x+hw, y-h+hd/2);
-    g.lineTo(x,    y-h+hd);
-    g.lineTo(x-hw, y-h+hd/2);
-    g.closePath(); g.fillPath();
-
-    // Top highlight shimmer
-    g.fillStyle(0xffffff,0.07);
-    g.beginPath();
-    g.moveTo(x,    y-h);
-    g.lineTo(x+hw*0.5, y-h+hd*0.25);
-    g.lineTo(x,    y-h+hd*0.5);
-    g.lineTo(x-hw*0.5, y-h+hd*0.25);
-    g.closePath(); g.fillPath();
-
-    // Left face
-    const lc = Phaser.Display.Color.IntegerToColor(sideC); lc.darken(10);
-    g.fillStyle(lc.color,1);
-    g.beginPath();
-    g.moveTo(x-hw, y-h+hd/2);
-    g.lineTo(x,    y-h+hd);
-    g.lineTo(x,    y+hd);
-    g.lineTo(x-hw, y+hd/2);
-    g.closePath(); g.fillPath();
-
-    // Right face
-    const rc = Phaser.Display.Color.IntegerToColor(darkC); rc.darken(10);
-    g.fillStyle(rc.color,1);
-    g.beginPath();
-    g.moveTo(x+hw, y-h+hd/2);
-    g.lineTo(x,    y-h+hd);
-    g.lineTo(x,    y+hd);
-    g.lineTo(x+hw, y+hd/2);
-    g.closePath(); g.fillPath();
-
-    // Edge lines
-    g.lineStyle(1,0xffffff,0.1);
-    g.beginPath();
-    g.moveTo(x,y-h); g.lineTo(x+hw,y-h+hd/2);
-    g.lineTo(x,y-h+hd); g.lineTo(x-hw,y-h+hd/2);
-    g.closePath(); g.strokePath();
-  }
-
-  drawStructure(g, isl, idx) {
-    const {x,y,w,d,h} = isl;
-    const hw=w/2, hd=d/2, ty=y-h;
-
-    if(idx===0) {
-      // Queen — hive tower with honeycomb
-      for(let i=0;i<3;i++){
-        const sc=1-i*0.28, lh=24*sc, lw=42*sc, ld=30*sc;
-        const ly = ty+hd/2-i*22;
-        g.fillStyle(0xE8821A,1);
-        g.beginPath();
-        g.moveTo(x,ly-lh); g.lineTo(x+lw,ly-lh+ld/2);
-        g.lineTo(x,ly-lh+ld); g.lineTo(x-lw,ly-lh+ld/2);
-        g.closePath(); g.fillPath();
-        g.fillStyle(0xF4A825,0.6);
-        for(let j=0;j<4;j++) g.fillCircle(x+(j-1.5)*9,ly-lh/2+ld/4,2.5);
-      }
-      g.fillStyle(0xFFD700,1);
-      g.fillStar(x,ty+hd/2-3*22-10,5,9,5);
-
-    } else if(idx===1) {
-      // Research — tower + telescope
-      g.fillStyle(0x706858,1);
-      g.fillRect(x-12,ty+hd/2-44,24,42);
-      g.fillStyle(0x9a8870,1);
-      g.fillRect(x-12,ty+hd/2-44,24,3);
-      g.fillStyle(0xF4A825,0.5);
-      g.fillRect(x-4,ty+hd/2-32,8,10);
-      g.fillStyle(0x404030,1);
-      g.fillTriangle(x-14,ty+hd/2-44,x,ty+hd/2-62,x+14,ty+hd/2-44);
-      // Telescope
-      g.fillStyle(0x808070,1);
-      g.fillRect(x+8,ty+hd/2-56,14,4);
-
-    } else if(idx===2) {
-      // Wealth — garden + market
-      const fc=[0xAA44CC,0x4488CC,0xFF8822,0x44CC88];
-      for(let i=0;i<14;i++){
-        const fx=x+Phaser.Math.Between(-44,44), fy=ty+hd/2+Phaser.Math.Between(-8,22);
-        g.fillStyle(fc[i%4],0.8); g.fillCircle(fx,fy,4);
-        g.fillStyle(0xFFDD44,0.9); g.fillCircle(fx,fy,2);
-      }
-      g.fillStyle(0x886644,1); g.fillRect(x+8,ty+hd/2-22,28,18);
-      g.fillStyle(0xF4A825,0.7); g.fillRect(x+6,ty+hd/2-25,32,5);
-
-    } else if(idx===3) {
-      // Chancellor — vault
-      g.fillStyle(0x605040,1); g.fillRect(x-18,ty+hd/2-28,36,26);
-      g.fillStyle(0x504030,1); g.fillCircle(x,ty+hd/2-28,14);
-      g.fillStyle(0x302010,1); g.fillRect(x-7,ty+hd/2-16,14,14);
-      for(let i=0;i<3;i++){
-        g.fillStyle(0xE8821A,0.9);
-        g.fillEllipse(x-16+i*16,ty+hd/2+8,10,14);
-      }
-
-    } else if(idx===4) {
-      // Workshop — printer
-      g.fillStyle(0x403020,1); g.fillRect(x-20,ty+hd/2-26,40,24);
-      g.fillStyle(0x224488,0.9); g.fillRect(x-12,ty+hd/2-20,16,12);
-      g.fillStyle(0x4488FF,0.5); g.fillRect(x-12,ty+hd/2-20,16,3);
-      g.fillStyle(0x302020,1); g.fillRect(x+8,ty+hd/2-36,7,12);
-
-    } else if(idx===5) {
-      // Security — fortress
-      g.fillStyle(0x303050,1); g.fillRect(x-22,ty+hd/2-18,44,16);
-      for(let i=0;i<5;i++) g.fillRect(x-20+i*10,ty+hd/2-24,6,7);
-      g.fillStyle(0x252545,1); g.fillRect(x-6,ty+hd/2-38,12,22);
-      g.fillStyle(0xFFFF88,0.9); g.fillCircle(x,ty+hd/2-40,4);
-      // Searchlight beam
-      g.fillStyle(0xFFFFAA,0.08);
-      g.fillTriangle(x,ty+hd/2-40,x-30,ty+hd/2+20,x+30,ty+hd/2+20);
-    }
-  }
-
-  drawBridges() {
-    const g = this.add.graphics();
-    const pairs = [
-      [0,0,230,-130],[0,0,-230,-130],[0,0,-230,110],
-      [0,0,230,110],[0,0,380,-10]
-    ];
-    pairs.forEach(([x1,y1,x2,y2]) => {
-      g.lineStyle(2,0xF4A825,0.2);
-      g.beginPath(); g.moveTo(x1,y1-20); g.lineTo(x2,y2-20); g.strokePath();
-      for(let i=1;i<7;i++){
-        const t=i/7;
-        g.fillStyle(0xF4A825,0.25);
-        g.fillCircle(x1+(x2-x1)*t,y1+(y2-y1)*t-20,2);
-      }
-    });
-    this.world.add(g);
-  }
-
-  drawNurseGarden() {
-    const g = this.add.graphics();
-    const colors=[0xFF9988,0xFFDD44,0x88FF88,0xFFAAFF,0x88DDFF];
-    for(let i=0;i<28;i++){
-      const a=(i/28)*Math.PI*2, r=128;
-      const fx=Math.cos(a)*r, fy=Math.sin(a)*r*0.35-30;
-      g.fillStyle(colors[i%colors.length],0.65); g.fillCircle(fx,fy,5);
-      g.fillStyle(0xFFFFFF,0.85); g.fillCircle(fx,fy,2);
-    }
-    this.world.add(g);
-  }
-
-  spawnBees() {
-    this.bees = [];
-
-    const beeConfig = [
-      {emoji:'👑',x:0,   y:-100,size:'22px',id:'queen'},
-      {emoji:'🔍',x:230, y:-195,size:'16px',id:'scout'},
-      {emoji:'🖨️',x:230, y:45,  size:'16px',id:'foreman'},
-      {emoji:'⚖️',x:-230,y:45,  size:'16px',id:'chancellor'},
-      {emoji:'🛡️',x:380, y:-75, size:'15px',id:'supervisor'},
-      {emoji:'🎵',x:-230,y:-195,size:'15px',id:'bard'},
-    ];
-
-    beeConfig.forEach((bc,i) => {
-      const bee = this.add.text(bc.x, bc.y, bc.emoji, {fontSize:bc.size}).setOrigin(0.5);
-      // Hover bob
-      this.tweens.add({targets:bee,y:bee.y-7,
-        duration:1600+i*200,yoyo:true,repeat:-1,ease:'Sine.easeInOut',
-        delay:i*180});
-      // Sway
-      this.tweens.add({targets:bee,x:bee.x+6,
-        duration:2200+i*300,yoyo:true,repeat:-1,ease:'Sine.easeInOut',
-        delay:i*120});
-      this.world.add(bee);
-      this.bees.push(bee);
-    });
-
-    // Nurse — constant patrol loop around hive
-    const nurse = this.add.text(0,-80,'🏥',{fontSize:'17px'}).setOrigin(0.5);
-    this.world.add(nurse);
-    this.nurseBee = nurse;
-    this.nurseAngle = 0;
-
-    // Scout — occasional fly-off and return
-    this.scoutBee = this.bees[1];
-    this.scoutHome = {x:230, y:-195};
-    this.scheduleScoutMission();
-
-    // Worker idle at queen island
-    const worker = this.add.text(-30,-90,'🐝',{fontSize:'15px'}).setOrigin(0.5);
-    this.tweens.add({targets:worker,y:worker.y-5,duration:1800,yoyo:true,repeat:-1,ease:'Sine.easeInOut'});
-    this.world.add(worker);
-  }
-
-  scheduleScoutMission() {
-    this.time.delayedCall(Phaser.Math.Between(6000,12000), () => {
-      // Scout flies off to the right
-      this.tweens.add({
-        targets: this.scoutBee,
-        x: 700, y: -250, duration: 1800, ease:'Power2.In',
-        onComplete: () => {
-          // Returns after a bit
-          this.time.delayedCall(2500, () => {
-            this.tweens.add({
-              targets: this.scoutBee,
-              x: this.scoutHome.x, y: this.scoutHome.y,
-              duration: 2000, ease:'Back.Out',
-              onComplete: () => {
-                addTick('🔍 Scout returned — waggle dance initiated');
-                this.scheduleScoutMission();
-              }
-            });
-          });
-        }
-      });
-    });
-  }
-
-  spawnParticles() {
-    // Floating honey motes
-    for(let i=0;i<25;i++){
-      const mx=Phaser.Math.Between(-W/2,W/2);
-      const my=Phaser.Math.Between(-H/4,H/4);
-      const mote=this.add.circle(mx,my,Math.random()*2+0.5,0xF4A825,Math.random()*0.25+0.05);
-      this.tweens.add({
-        targets:mote, y:mote.y-Phaser.Math.Between(50,150),
-        x:mote.x+Phaser.Math.Between(-30,30), alpha:0,
-        duration:Phaser.Math.Between(5000,12000),
-        repeat:-1, delay:Phaser.Math.Between(0,8000),
-        onRepeat:()=>{
-          mote.setPosition(Phaser.Math.Between(-W/2,W/2),Phaser.Math.Between(0,H/4));
-          mote.setAlpha(Math.random()*0.25+0.05);
-        }
-      });
-    }
-
-    // Workshop smoke
-    this.time.addEvent({
-      delay:1200,
-      callback:()=>this.emitSmoke(),
-      loop:true
-    });
-  }
-
-  emitSmoke() {
-    const smoke = this.world.scene.add.circle(230+8,-35,4,0x888888,0.25);
-    this.world.add(smoke);
-    this.tweens.add({
-      targets:smoke, y:smoke.y-40, x:smoke.x+Phaser.Math.Between(-8,8),
-      alpha:0, scaleX:3, scaleY:3, duration:2500, ease:'Power1',
-      onComplete:()=>smoke.destroy()
-    });
-  }
-
-  update(t) {
-    // Nurse patrol
-    this.nurseAngle += 0.008;
-    if(this.nurseBee) {
-      this.nurseBee.x = Math.cos(this.nurseAngle)*115;
-      this.nurseBee.y = Math.sin(this.nurseAngle)*38-45;
-    }
-
-    // Subtle world breathe
-    const s = 1 + Math.sin(t*0.0004)*0.004;
-    this.world.setScale(s);
-  }
+  bars.innerHTML = html;
 }
 
-const game = new Phaser.Game({
-  type: Phaser.AUTO,
-  parent: 'game',
-  width: W, height: H,
-  backgroundColor: '#08080f',
-  transparent: false,
-  scene: [HiveScene],
-  scale: { mode: Phaser.Scale.RESIZE, autoCenter: Phaser.Scale.CENTER_BOTH }
-});
-<script>
-// ── HIVE Live Data Feed ──────────────────────────────────────
-const CHANCELLOR = 'http://192.168.50.10:8001';
+function renderAgents(data) {
+  const online = data.online || [];
+  const silent = data.silent || [];
+  const allAgents = [
+    ...online.map(n => ({ name: n, status: 'online' })),
+    ...silent.map(n => ({ name: n, status: 'silent' }))
+  ].sort((a, b) => a.name.localeCompare(b.name));
 
-function updateDashboard(d) {
-  const f = d.financial;
-  const m = d.market;
-  const dec = d.decree;
-  const agents = d.agents;
+  document.getElementById('agents-online-count').textContent = data.online_count ?? online.length;
+  document.getElementById('agents-silent-count').textContent = silent.length;
+  document.getElementById('agents-total').textContent = data.total ?? allAgents.length;
 
-  // Financial
-  const td = document.getElementById('m-today');
-  const sp = document.getElementById('m-spend');
-  const dc = document.getElementById('m-decrees');
-  if (td) td.textContent = '$' + (f.revenue_today || 0).toFixed(2);
-  if (sp) sp.textContent = '$' + (f.recovery_usd || 0).toFixed(2) + ' recovered';
-  if (dc) dc.textContent = f.recovery_pct + '% of $2,000';
-
-  // Market signal
-  const ns = document.querySelector('.market-niche, [class*="niche"]');
-  const vg = document.querySelector('.vigor-value, [class*="vigor"]');
-  if (ns) ns.textContent = m.niche || '—';
-  if (vg) vg.textContent = (m.vigor || 0) + ' / 10';
-
-  // Agent badges — update online/silent status
-  agents.online.forEach(name => {
-    const rows = document.querySelectorAll('.agent-row');
-    rows.forEach(row => {
-      if (row.textContent.toLowerCase().includes(name)) {
-        const badge = row.querySelector('.badge');
-        if (badge) {
-          badge.textContent = 'ONLINE';
-          badge.className = 'badge badge-online';
-        }
-      }
-    });
-  });
-
-  // Decree panel
-  if (dec && dec.decision) {
-    const body = document.getElementById('decree-body');
-    if (body) {
-      body.innerHTML = `
-        Queen decree: <strong>${dec.decision.toUpperCase()}</strong><br>
-        ${dec.reasoning ? dec.reasoning.substring(0, 120) + '...' : ''}<br>
-        <div class="decree-id">Worker: ${dec.worker || '—'} · Spend: $${dec.spend || 0}</div>
-      `;
-    }
-  }
+  const list = document.getElementById('agent-list');
+  list.innerHTML = allAgents.map(a => `
+    <div class="agent-row ${a.status}">
+      <div class="agent-dot ${a.status}"></div>
+      <div class="agent-name">${a.name}</div>
+      <div class="agent-status">${a.status}</div>
+    </div>
+  `).join('');
 }
 
-async function fetchHiveStatus() {
+function renderSystem(sys) {
+  const grid = document.getElementById('sys-grid');
+  grid.innerHTML = Object.entries(sys).map(([name, status]) => `
+    <div class="sys-card">
+      <span class="sys-name">${name}</span>
+      <span class="sys-status ${status}">${status}</span>
+    </div>
+  `).join('');
+}
+
+function renderStorage(storage) {
+  const block = document.getElementById('storage-block');
+  block.innerHTML = Object.entries(storage).map(([name, d]) => `
+    <div class="storage-item">
+      <div class="storage-header">
+        <span class="name">${name}</span>
+        <span>${d.used_pct.toFixed(1)}% · ${d.free_gb.toFixed(0)}GB free of ${d.total_gb.toFixed(0)}GB</span>
+      </div>
+      <div class="storage-bar-wrap">
+        <div class="storage-bar-fill ${d.used_pct > 80 ? 'warn' : ''}" style="width:${d.used_pct}%"></div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function renderActivity(activity) {
+  const feed = document.getElementById('activity-feed');
+  if (!activity || !activity.length) {
+    feed.innerHTML = '<div style="color:var(--text-dim);font-family:var(--mono);font-size:11px">No activity</div>';
+    return;
+  }
+  feed.innerHTML = activity.map(a => `
+    <div class="activity-item">
+      <div class="activity-agent">${a.agent}</div>
+      <div class="activity-text">${a.raw || a.text}</div>
+    </div>
+  `).join('');
+}
+
+function applyData(d) {
+  // Recovery bar
+  const pct = d.financial?.recovery_pct ?? 0;
+  document.getElementById('recovery-bar').style.width = Math.min(pct, 100) + '%';
+  document.getElementById('recovery-usd').textContent = fmt(d.financial?.recovery_usd);
+  document.getElementById('recovery-target').textContent = fmt(d.financial?.recovery_target);
+  document.getElementById('recovery-pct').textContent = fmtPct(pct);
+
+  // Financials
+  document.getElementById('rev-today').textContent = fmt(d.financial?.revenue_today);
+  document.getElementById('rev-mtd').textContent = fmt(d.financial?.revenue_mtd);
+  document.getElementById('gross-all').textContent = fmt(d.financial?.gross_all_time);
+  document.getElementById('net-profit').textContent = fmt(d.financial?.net_profit);
+
+  // Honey split
+  const hs = d.financial?.honey_split ?? {};
+  document.getElementById('hs-tax').textContent = fmt(hs.tax);
+  document.getElementById('hs-venture').textContent = fmt(hs.venture);
+  document.getElementById('hs-reinvest').textContent = fmt(hs.reinvest);
+  document.getElementById('hs-profit').textContent = fmt(hs.profit);
+  document.getElementById('hs-chancellor').textContent = fmt(hs.chancellor);
+
+  // Market
+  const m = d.market ?? {};
+  document.getElementById('market-niche').textContent = m.niche ?? '—';
+  document.getElementById('vigor-num').textContent = m.vigor ?? '—';
+  if (m.vigor) renderVigorBars(m.vigor);
+
+  // Market tags
+  const tags = document.getElementById('market-tags');
+  const tagDefs = [
+    m.direction ? { label: m.direction.toUpperCase(), cls: 'blue' } : null,
+    m.action ? { label: m.action.replace(/_/g,' ').toUpperCase(), cls: 'amber' } : null,
+    m.mhr_target ? { label: `$${m.mhr_target}/MHR`, cls: 'green' } : null,
+  ].filter(Boolean);
+  tags.innerHTML = tagDefs.map(t => `<div class="tag ${t.cls}">${t.label}</div>`).join('');
+
+  // Decree
+  const dec = d.decree ?? {};
+  const badge = document.getElementById('decree-badge');
+  const decision = (dec.decision ?? '').toLowerCase();
+  badge.textContent = (dec.decision ?? '—').toUpperCase();
+  badge.className = 'verdict-badge ' + (decision === 'approved' ? 'approved' : decision === 'rejected' ? 'rejected' : '');
+  document.getElementById('decree-reasoning').textContent = dec.reasoning ?? '—';
+  document.getElementById('decree-worker').textContent = dec.worker ?? '—';
+  document.getElementById('decree-spend').textContent = fmt(dec.spend);
+  document.getElementById('decree-model').textContent = dec.model_rec ?? '—';
+
+  // Agents
+  if (d.agents) renderAgents(d.agents);
+
+  // System
+  if (d.system) renderSystem(d.system);
+
+  // Storage
+  if (d.storage) renderStorage(d.storage);
+
+  // Queue
+  document.getElementById('q-pending').textContent = d.queue?.pending ?? '—';
+  document.getElementById('q-total').textContent = d.queue?.total ?? '—';
+
+  // Activity
+  if (d.activity) renderActivity(d.activity);
+
+  // Timestamp
+  const ts = d.timestamp ? new Date(d.timestamp) : new Date();
+  document.getElementById('ts-display').textContent = ts.toLocaleTimeString('en-US', { hour12: false }) + ' UTC';
+
+  // Live dot green
+  const dot = document.getElementById('live-dot');
+  dot.style.background = 'var(--green)';
+  dot.style.boxShadow = '0 0 8px var(--green)';
+  document.getElementById('fix-badge').style.display = 'none';
+  lastFetch = Date.now();
+}
+
+async function fetchStatus() {
   try {
-    const r = await fetch(CHANCELLOR + '/hive-status');
-    const d = await r.json();
-    updateDashboard(d);
-  } catch(e) {
-    console.warn('Hive status fetch failed:', e);
+    const res = await fetch(ENDPOINT, { cache: 'no-store' });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    applyData(data);
+  } catch (err) {
+    console.error('[HIVE]', err);
+    const dot = document.getElementById('live-dot');
+    dot.style.background = 'var(--red)';
+    dot.style.boxShadow = '0 0 8px var(--red)';
+    if (lastFetch && Date.now() - lastFetch > 90000) {
+      document.getElementById('fix-badge').style.display = 'block';
+    }
   }
 }
 
-// Fetch immediately and every 30 seconds
-fetchHiveStatus();
-setInterval(fetchHiveStatus, 30000);
+// Initial load + auto-refresh
+fetchStatus();
+setInterval(fetchStatus, REFRESH_MS);
 
-window.addEventListener('resize', () => game.scale.resize(window.innerWidth, window.innerHeight));
+// Clock tick
+setInterval(() => {
+  if (!lastFetch) return;
+  // Just show staleness if needed
+}, 10000);
 </script>
 </body>
 </html>
