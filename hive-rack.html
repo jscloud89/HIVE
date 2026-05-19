@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1280">
+<title>HIVE // RACK</title>
+<link href="https://fonts.googleapis.com/css2?family=VT323&family=Share+Tech+Mono&family=Barlow+Condensed:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+:root{
+  --gold:#F4A825;--gold-dim:#7a4e08;--gold-bright:#ffd060;
+  --bg:#06060e;--text:#b8c4d0;--text-dim:#3a4455;
+  --green:#2ec87a;--red:#d63030;--blue:#3a8eef;--purple:#8855cc;
+  --mono:'Share Tech Mono',monospace;--vt:'VT323',monospace;
+  --bar:'Barlow Condensed',sans-serif;
+}
+html,body{width:1280px;height:400px;overflow:hidden;background:var(--bg);}
+body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.06) 2px,rgba(0,0,0,0.06) 4px);pointer-events:none;z-index:999;}
+
+#top-bar{position:absolute;top:0;left:0;right:0;height:28px;background:rgba(6,6,14,0.97);border-bottom:1px solid rgba(244,168,37,0.3);display:flex;align-items:center;z-index:100;}
+.tb-logo{font-family:var(--bar);font-size:13px;font-weight:900;letter-spacing:5px;color:var(--gold);padding:0 14px;border-right:1px solid rgba(244,168,37,0.2);height:100%;display:flex;align-items:center;text-shadow:0 0 12px rgba(244,168,37,0.5);white-space:nowrap;}
+.tb-seg{height:100%;display:flex;align-items:center;padding:0 10px;border-right:1px solid rgba(244,168,37,0.1);gap:6px;white-space:nowrap;}
+.tb-lbl{font-family:var(--mono);font-size:9px;color:var(--text-dim);letter-spacing:2px;text-transform:uppercase;}
+.tb-val{font-family:var(--mono);font-size:11px;color:var(--text);letter-spacing:1px;}
+.tb-val.gold{color:var(--gold);}
+.tb-val.green{color:var(--green);}
+.tb-val.red{color:var(--red);}
+.sdot{width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 5px var(--green);animation:pulse 2s ease-in-out infinite;flex-shrink:0;}
+.sdot.off{background:var(--red);box-shadow:0 0 5px var(--red);animation:none;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.2}}
+.print-bar-wrap{flex:1;height:7px;background:rgba(244,168,37,0.08);border:1px solid rgba(244,168,37,0.2);overflow:hidden;border-radius:1px;min-width:70px;max-width:100px;}
+.print-bar-fill{height:100%;background:linear-gradient(90deg,var(--gold-dim),var(--gold));transition:width 2s ease;}
+#tb-clock{font-family:var(--vt);font-size:22px;color:var(--gold);letter-spacing:3px;padding:0 14px;margin-left:auto;text-shadow:0 0 8px rgba(244,168,37,0.35);border-left:1px solid rgba(244,168,37,0.12);}
+
+#panorama{position:absolute;top:28px;left:0;right:0;height:340px;overflow:hidden;}
+canvas#scene{position:absolute;inset:0;}
+
+#bottom-bar{position:absolute;bottom:0;left:0;right:0;height:32px;background:rgba(6,6,14,0.97);border-top:1px solid rgba(244,168,37,0.25);display:flex;align-items:center;overflow:hidden;z-index:100;}
+.bot-lbl{font-family:var(--bar);font-size:9px;font-weight:700;letter-spacing:3px;color:var(--gold);padding:0 12px;white-space:nowrap;border-right:1px solid rgba(244,168,37,0.2);height:100%;display:flex;align-items:center;}
+.ticker-track{flex:1;overflow:hidden;height:100%;display:flex;align-items:center;}
+.ticker-inner{display:flex;gap:48px;animation:scroll 45s linear infinite;white-space:nowrap;}
+@keyframes scroll{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
+.t-item{font-family:var(--mono);font-size:10px;color:var(--text-dim);display:flex;align-items:center;gap:7px;}
+.t-agent{color:var(--gold);text-transform:uppercase;font-size:9px;letter-spacing:1px;}
+
+#decree-overlay{position:fixed;inset:0;background:rgba(0,0,0,0);z-index:500;display:flex;align-items:flex-start;justify-content:center;padding-top:28px;pointer-events:none;transition:background 0.4s;}
+#decree-overlay.active{background:rgba(0,0,0,0.75);pointer-events:all;}
+#decree-panel{background:linear-gradient(135deg,#0a0a18,#160e00);border:2px solid var(--gold);padding:18px 28px;max-width:500px;width:95%;transform:translateY(-120%);transition:transform 0.5s cubic-bezier(0.175,0.885,0.32,1.275);box-shadow:0 0 50px rgba(244,168,37,0.3);text-align:center;}
+#decree-overlay.active #decree-panel{transform:translateY(0);}
+.d-crown{font-size:32px;animation:cp 1.5s ease-in-out infinite;display:block;margin-bottom:4px;}
+@keyframes cp{0%,100%{filter:drop-shadow(0 0 8px rgba(244,168,37,0.8))}50%{filter:drop-shadow(0 0 20px rgba(244,168,37,1))}}
+.d-title{font-family:var(--bar);font-size:16px;font-weight:900;letter-spacing:8px;color:var(--gold);margin-bottom:10px;}
+.d-content{font-family:var(--mono);font-size:11px;color:var(--text);line-height:1.8;margin-bottom:10px;text-align:left;background:rgba(244,168,37,0.04);border:1px solid rgba(244,168,37,0.12);padding:10px 14px;}
+.d-reason{font-family:var(--mono);font-size:10px;color:var(--text-dim);font-style:italic;line-height:1.6;margin-bottom:14px;text-align:left;}
+.d-btns{display:flex;gap:10px;justify-content:center;}
+.d-btn{font-family:var(--bar);font-size:12px;font-weight:700;letter-spacing:3px;padding:8px 24px;border:none;cursor:pointer;transition:all 0.2s;pointer-events:all;}
+.d-btn.ok{background:rgba(46,200,122,0.1);border:1px solid var(--green);color:var(--green);}
+.d-btn.ok:hover{background:var(--green);color:#000;}
+.d-btn.no{background:rgba(214,48,48,0.1);border:1px solid var(--red);color:var(--red);}
+.d-btn.no:hover{background:var(--red);color:#fff;}
+</style>
+</head>
+<body>
+
+<div id="top-bar">
+  <div class="tb-logo">⬡ HIVE</div>
+  <div class="tb-seg"><span class="sdot" id="dot-chan"></span><span class="tb-lbl">CHANCELLOR</span><span class="tb-val green" id="val-chan">ONLINE</span></div>
+  <div class="tb-seg"><span class="tb-lbl">AGENTS</span><span class="tb-val gold" id="val-agents">—</span><span class="tb-lbl">/ 18 ONLINE</span></div>
+  <div class="tb-seg"><span class="tb-lbl">RECOVERY</span><span class="tb-val gold" id="val-rec">$0.00</span><span class="tb-lbl">/ $2000</span><span class="tb-val" id="val-pct" style="color:var(--text-dim)">0%</span></div>
+  <div class="tb-seg"><span class="tb-lbl">TODAY</span><span class="tb-val gold" id="val-today">$0.00</span></div>
+  <div class="tb-seg" style="flex:1;gap:8px;"><span class="tb-lbl">PRINT</span><div class="print-bar-wrap"><div class="print-bar-fill" id="print-bar" style="width:0%"></div></div><span class="tb-val" id="print-pct">IDLE</span></div>
+  <div class="tb-seg"><span class="tb-lbl">VIGOR</span><span class="tb-val gold" id="val-vigor">—</span></div>
+  <div class="tb-seg"><span class="tb-lbl">DECREE</span><span class="tb-val green" id="val-decree">—</span></div>
+  <div id="tb-clock">00:00:00</div>
+</div>
+
+<div id="panorama"><canvas id="scene" width="1280" height="340"></canvas></div>
+
+<div id="bottom-bar">
+  <div class="bot-lbl">⬡ HIVE ACTIVITY</div>
+  <div class="ticker-track"><div class="ticker-inner" id="ticker">
+    <div class="t-item"><span class="t-agent">HIVE</span><span style="opacity:0.25">//</span><span>Initializing feed...</span></div>
+  </div></div>
+</div>
+
+<div id="decree-overlay">
+  <div id="decree-panel">
+    <span class="d-crown">👑</span>
+    <div class="d-title">ROYAL DECREE</div>
+    <div class="d-content">
+      <div>NICHE: <span id="d-niche">—</span></div>
+      <div>WORKER: <span id="d-worker">—</span></div>
+      <div>BUDGET: <span id="d-spend">—</span></div>
+      <div>MODEL: <span id="d-model">—</span></div>
+    </div>
+    <div class="d-reason" id="d-reason">—</div>
+    <div class="d-btns">
+      <button class="d-btn ok" onclick="closeDecree()">✓ APPROVE</button>
+      <button class="d-btn no" onclick="closeDecree()">✗ DENY</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const API='http://192.168.50.10:8001';
+const A='http://192.168.50.10:8080/assets';
+const REFRESH=30000;
+
+const canvas=document.getElementById('scene');
+const ctx=canvas.getContext('2d');
+const W=1280,H=340;
+
+// ── Image loader ──
+const IMGS={};
+function loadImg(k,src){return new Promise(r=>{const i=new Image();i.onload=()=>{IMGS[k]=i;r();};i.onerror=()=>{console.warn('Failed:',k);r();};i.src=src;});}
+
+// ── Island definitions ──
+const ISLANDS=[
+  {id:'security', label:'Security Fortress', room:'room-security', x:95,  y:242,size:192,accent:'#3a5eff',phase:1,
+   bees:[{key:'bee-warden',sc:0.055,ox:-22,oy:20},{key:'bee-supervisor',sc:0.05,ox:22,oy:25}]},
+  {id:'apiary',   label:'The Apiary',        room:'room-apiary',  x:268, y:228,size:206,accent:'#F4A825',phase:1,
+   bees:[{key:'bee-nurse',sc:0.06,ox:0,oy:22}]},
+  {id:'research', label:'Research Station',  room:'room-research', x:455, y:216,size:218,accent:'#39d98a',phase:1,
+   bees:[{key:'bee-scout',sc:0.065,ox:-18,oy:18}]},
+  {id:'queen',    label:"Queen's Court",      room:'room-queen',   x:645, y:192,size:255,accent:'#F4A825',phase:1,tallest:true,
+   bees:[{key:'bee-queen',sc:0.075,ox:0,oy:15}]},
+  {id:'workshop', label:'The Workshop',       room:'room-workshop',x:838, y:216,size:218,accent:'#4a9eff',phase:1,
+   bees:[{key:'bee-foreman',sc:0.062,ox:-20,oy:18},{key:'bee-worker',sc:0.055,ox:22,oy:22}]},
+  {id:'vault',    label:'The Vault',           room:'room-vault',  x:1022,y:228,size:206,accent:'#cd853f',phase:1,
+   bees:[{key:'bee-chancellor',sc:0.062,ox:-18,oy:20},{key:'bee-treasurer',sc:0.055,ox:20,oy:24}]},
+  {id:'wealth',   label:'Wealth Garden',       room:'room-wealth', x:1185,y:238,size:195,accent:'#9b59b6',phase:2,
+   bees:[{key:'bee-auditor',sc:0.05,ox:-16,oy:22},{key:'bee-architect',sc:0.05,ox:18,oy:26}]},
+];
+
+let t=0,decreeShown=false;
+
+// ── Stars ──
+const STARS=Array.from({length:200},()=>({
+  x:Math.random()*W,y:Math.random()*H*0.68,
+  r:Math.random()*1.3,a:Math.random()*0.5+0.04,
+  tw:Math.random()*Math.PI*2,sp:0.3+Math.random()*0.8
+}));
+
+// ── Particles ──
+let motes=[],smoke=[];
+function initParticles(){
+  motes=Array.from({length:55},()=>{
+    const isl=ISLANDS[Math.floor(Math.random()*ISLANDS.length)];
+    return{x:isl.x+(Math.random()-.5)*isl.size*0.45,y:isl.y+isl.size*0.35,
+      vy:-(0.28+Math.random()*.45),vx:(Math.random()-.5)*.28,a:0.35+Math.random()*.5,r:1+Math.random()*.8,isl};
+  });
+  const ws=ISLANDS.find(i=>i.id==='workshop');
+  smoke=Array.from({length:9},()=>({
+    x:ws.x+(Math.random()-.5)*28,y:ws.y-ws.size*0.24,
+    vy:-(0.38+Math.random()*.28),vx:(Math.random()-.5)*.22,
+    a:0.07+Math.random()*.06,r:8+Math.random()*8,ox:Math.random()*Math.PI*2
+  }));
+}
+
+// ── Nurse patrol ──
+let nurseX=-60,nurseDir=1;
+
+// ── Scout fly animation ──
+const scoutIsl=ISLANDS.find(i=>i.id==='research');
+let scoutState='home',scoutX=scoutIsl.x-18,scoutY=scoutIsl.y+15;
+let scoutFrame=0;
+setInterval(()=>{if(scoutState==='home'){scoutState='out';}},18000);
+
+// ── Queen walk animation ──
+let queenFrame=0;
+setInterval(()=>{queenFrame=(queenFrame+1)%2;},500);
+
+// ── Searchlight ──
+let searchA=0;
+
+// ── Hex clip ──
+function hexClip(cx,cy,sz){
+  const hw=sz*0.352,hh=sz*0.342;
+  ctx.beginPath();
+  ctx.moveTo(cx,cy-hh);ctx.lineTo(cx+hw,cy-hh*0.5);ctx.lineTo(cx+hw,cy+hh*0.5);
+  ctx.lineTo(cx,cy+hh);ctx.lineTo(cx-hw,cy+hh*0.5);ctx.lineTo(cx-hw,cy-hh*0.5);
+  ctx.closePath();
+}
+
+function drawBeeAt(key,x,y,sc,alpha){
+  const img=IMGS[key];
+  if(!img)return;
+  const iw=img.width*sc,ih=img.height*sc;
+  ctx.save();
+  if(alpha!==undefined)ctx.globalAlpha=alpha;
+  ctx.drawImage(img,x-iw/2,y-ih*0.85,iw,ih);
+  ctx.restore();
+}
+
+function render(){
+  ctx.clearRect(0,0,W,H);
+
+  // Sky
+  const sky=ctx.createLinearGradient(0,0,0,H*0.72);
+  sky.addColorStop(0,'#02020a');sky.addColorStop(0.5,'#06060f');sky.addColorStop(1,'#0c0c1a');
+  ctx.fillStyle=sky;ctx.fillRect(0,0,W,H);
+
+  // Background mountains
+  if(IMGS['mountains']){
+    ctx.save();ctx.globalAlpha=0.35;
+    ctx.drawImage(IMGS['mountains'],0,H*0.18,W,H*0.55);
+    ctx.restore();
+  }
+
+  // Distant city
+  if(IMGS['distant-city']){
+    ctx.save();ctx.globalAlpha=0.28;
+    ctx.drawImage(IMGS['distant-city'],0,H*0.32,W,H*0.45);
+    ctx.restore();
+  }
+
+  // Clouds (slow scroll)
+  if(IMGS['clouds']){
+    ctx.save();ctx.globalAlpha=0.18;
+    const coff=(t*0.3)%W;
+    ctx.drawImage(IMGS['clouds'],-coff,H*0.04,W,H*0.35);
+    ctx.drawImage(IMGS['clouds'],W-coff,H*0.04,W,H*0.35);
+    ctx.restore();
+  }
+
+  // Stars
+  STARS.forEach(s=>{
+    const a=s.a*(0.55+Math.sin(t*s.sp+s.tw)*0.45);
+    ctx.beginPath();ctx.arc(s.x,s.y,s.r,0,Math.PI*2);
+    ctx.fillStyle=`rgba(255,255,255,${a})`;ctx.fill();
+  });
+
+  // Ground
+  const grd=ctx.createLinearGradient(0,H*0.62,0,H);
+  grd.addColorStop(0,'rgba(244,168,37,0.05)');grd.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.fillStyle=grd;ctx.fillRect(0,H*0.62,W,H*0.38);
+  ctx.beginPath();ctx.moveTo(0,H*0.83);ctx.lineTo(W,H*0.83);
+  ctx.strokeStyle='rgba(244,168,37,0.06)';ctx.lineWidth=1;ctx.stroke();
+
+  // Searchlight (security)
+  const sec=ISLANDS.find(i=>i.id==='security');
+  searchA=Math.sin(t*0.35)*0.55;
+  const slx=sec.x+Math.cos(searchA)*220,sly=sec.y-sec.size*0.32+Math.sin(searchA)*70;
+  ctx.save();
+  const slg=ctx.createLinearGradient(sec.x,sec.y-sec.size*0.32,slx,sly);
+  slg.addColorStop(0,'rgba(180,215,255,0.2)');slg.addColorStop(1,'rgba(180,215,255,0)');
+  ctx.beginPath();ctx.moveTo(sec.x-10,sec.y-sec.size*0.32);ctx.lineTo(sec.x+10,sec.y-sec.size*0.32);
+  ctx.lineTo(slx+22,sly);ctx.lineTo(slx-22,sly);ctx.closePath();
+  ctx.fillStyle=slg;ctx.fill();ctx.restore();
+
+  // Islands
+  ISLANDS.forEach(isl=>{
+    const bob=Math.sin(t*0.38+isl.x*0.01)*3;
+    const img=IMGS[isl.room];
+    const rx=isl.x,ry=isl.y+bob;
+
+    // Glow ring
+    if(isl.phase===1){
+      const ga=0.07+Math.sin(t*1.4+isl.x)*0.035;
+      const R=parseInt(isl.accent.slice(1,3),16),G=parseInt(isl.accent.slice(3,5),16),B=parseInt(isl.accent.slice(5,7),16);
+      const gr=ctx.createRadialGradient(rx,ry,8,rx,ry,isl.size*0.52);
+      gr.addColorStop(0,`rgba(${R},${G},${B},${ga})`);gr.addColorStop(1,'rgba(0,0,0,0)');
+      ctx.fillStyle=gr;ctx.beginPath();ctx.arc(rx,ry,isl.size*0.52,0,Math.PI*2);ctx.fill();
+    }
+
+    // Room image with hex clip
+    if(img){
+      ctx.save();hexClip(rx,ry,isl.size);ctx.clip();
+      ctx.drawImage(img,rx-isl.size/2,ry-isl.size/2,isl.size,isl.size);
+      // Phase 2 dim
+      if(isl.phase===2){ctx.fillStyle='rgba(6,6,14,0.5)';ctx.fill();}
+      ctx.restore();
+    }
+
+    // Label
+    ctx.save();
+    ctx.font=`700 9px 'Barlow Condensed',sans-serif`;
+    ctx.textAlign='center';
+    ctx.fillStyle=isl.phase===2?'rgba(90,90,110,0.6)':isl.accent;
+    ctx.globalAlpha=0.75;
+    ctx.fillText(isl.label.toUpperCase(),rx,ry+isl.size*0.37+11);
+    if(isl.phase===2){
+      ctx.font=`700 8px 'Barlow Condensed',sans-serif`;
+      ctx.fillStyle='#6688ff';ctx.globalAlpha=0.55;
+      ctx.fillText('PHASE 2',rx,ry+isl.size*0.37+21);
+    }
+    ctx.restore();
+  });
+
+  // ── Bees on islands ──
+  ISLANDS.forEach(isl=>{
+    const bob=Math.sin(t*0.38+isl.x*0.01)*3;
+    const alpha=isl.phase===2?0.45:1;
+    isl.bees.forEach((b,bi)=>{
+      const beeBob=Math.sin(t*1.1+isl.x*0.01+bi)*3;
+      // Special: queen uses walk frames
+      let key=b.key;
+      if(b.key==='bee-queen'){
+        key=queenFrame===0?'bee-queen':'bee-queen-walk1';
+        if(!IMGS[key])key='bee-queen';
+      }
+      // Special: scout uses fly frames when flying
+      if(b.key==='bee-scout'&&scoutState==='home'){
+        key='bee-scout';
+      }
+      drawBeeAt(key,isl.x+b.ox,isl.y+bob+b.oy+beeBob,b.sc,alpha);
+    });
+  });
+
+  // ── Scout fly-off ──
+  if(scoutState==='out'){
+    scoutFrame=(scoutFrame+1)%2;
+    scoutX-=3.5;scoutY-=0.4;
+    const fkey=scoutFrame===0?'bee-scout-fly1':'bee-scout-fly2';
+    drawBeeAt(IMGS[fkey]?fkey:'bee-scout',scoutX,scoutY,0.065);
+    if(scoutX<-80){scoutState='in';scoutX=W+80;scoutY=scoutIsl.y+10;}
+  } else if(scoutState==='in'){
+    scoutFrame=(scoutFrame+1)%2;
+    scoutX-=4;
+    const fkey=scoutFrame===0?'bee-scout-fly1':'bee-scout-fly2';
+    ctx.save();ctx.scale(-1,1);
+    drawBeeAt(IMGS[fkey]?fkey:'bee-scout',-scoutX,scoutY,0.065);
+    ctx.restore();
+    if(scoutX<scoutIsl.x){scoutState='home';scoutX=scoutIsl.x-18;scoutY=scoutIsl.y+15;}
+  }
+
+  // ── Nurse patrol ──
+  nurseX+=nurseDir*0.75;
+  if(nurseX>W+60){nurseX=-60;}
+  const nurseY=210+Math.sin(t*1.2)*5;
+  const nurseBob=Math.sin(t*2)*2;
+  if(IMGS['bee-nurse']){
+    ctx.save();
+    ctx.globalAlpha=0.75;
+    if(nurseDir<0){ctx.scale(-1,1);drawBeeAt('bee-nurse',-nurseX,nurseY+nurseBob,0.052);}
+    else drawBeeAt('bee-nurse',nurseX,nurseY+nurseBob,0.052);
+    ctx.restore();
+  }
+
+  // ── Honey motes ──
+  motes.forEach(p=>{
+    p.y+=p.vy;p.x+=p.vx;p.a-=0.0016;
+    if(p.a<=0||p.y<20){
+      p.x=p.isl.x+(Math.random()-.5)*p.isl.size*0.4;
+      p.y=p.isl.y+p.isl.size*0.35;p.a=0.3+Math.random()*.45;
+    }
+    ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+    ctx.fillStyle=`rgba(244,168,37,${p.a})`;ctx.fill();
+  });
+
+  // ── Workshop smoke ──
+  const ws=ISLANDS.find(i=>i.id==='workshop');
+  smoke.forEach(s=>{
+    s.y+=s.vy;s.x+=Math.sin(t*.85+s.ox)*.2+s.vx;s.a-=0.0009;
+    if(s.a<=0){s.x=ws.x+(Math.random()-.5)*28;s.y=ws.y-ws.size*0.24;s.a=0.065;}
+    ctx.beginPath();ctx.arc(s.x,s.y,s.r,0,Math.PI*2);
+    ctx.fillStyle=`rgba(140,140,140,${s.a})`;ctx.fill();
+  });
+
+  t+=0.016;
+  requestAnimationFrame(render);
+}
+
+// ── Clock ──
+setInterval(()=>{
+  const n=new Date();
+  document.getElementById('tb-clock').textContent=
+    String(n.getUTCHours()).padStart(2,'0')+':'+String(n.getUTCMinutes()).padStart(2,'0')+':'+String(n.getUTCSeconds()).padStart(2,'0');
+},1000);
+
+// ── Data ──
+let decreeData=null;
+function applyData(d){
+  const f=d.financial||{},m=d.market||{},dec=d.decree||{},ag=d.agents||{};
+  document.getElementById('val-agents').textContent=ag.online_count||'—';
+  document.getElementById('val-rec').textContent='$'+(f.recovery_usd||0).toFixed(2);
+  document.getElementById('val-pct').textContent=(f.recovery_pct||0).toFixed(1)+'%';
+  document.getElementById('val-today').textContent='$'+(f.revenue_today||0).toFixed(2);
+  document.getElementById('val-vigor').textContent=m.vigor||'—';
+  const badge=document.getElementById('val-decree');
+  badge.textContent=(dec.decision||'—').toUpperCase();
+  badge.style.color=dec.decision==='approved'?'var(--green)':dec.decision==='denied'?'var(--red)':'var(--text-dim)';
+  if(d.activity?.length){
+    document.getElementById('ticker').innerHTML=[...d.activity,...d.activity].map(a=>
+      `<div class="t-item"><span class="t-agent">${a.agent}</span><span style="opacity:0.25">//</span><span>${a.raw||a.text}</span></div>`
+    ).join('');
+  }
+  if(!decreeShown&&dec.decision==='approved'){
+    decreeData=d;
+    setTimeout(()=>{
+      document.getElementById('d-niche').textContent=m.niche||'—';
+      document.getElementById('d-worker').textContent=dec.worker||'—';
+      document.getElementById('d-spend').textContent='$'+(dec.spend||0).toFixed(2);
+      document.getElementById('d-model').textContent=dec.model_rec||'—';
+      document.getElementById('d-reason').textContent=dec.reasoning||'—';
+      document.getElementById('decree-overlay').classList.add('active');
+    },4000);
+    decreeShown=true;
+  }
+}
+function closeDecree(){document.getElementById('decree-overlay').classList.remove('active');}
+
+async function fetchData(){
+  try{
+    const r=await fetch(API+'/hive-status',{cache:'no-store'});
+    applyData(await r.json());
+    document.getElementById('dot-chan').className='sdot';
+    document.getElementById('val-chan').textContent='ONLINE';
+    document.getElementById('val-chan').style.color='var(--green)';
+  }catch(e){
+    document.getElementById('dot-chan').className='sdot off';
+    document.getElementById('val-chan').textContent='OFFLINE';
+    document.getElementById('val-chan').style.color='var(--red)';
+  }
+}
+
+// ── Init ──
+async function init(){
+  const loads=[
+    // Rooms
+    ...ISLANDS.map(isl=>loadImg(isl.room,`${A}/rooms/${isl.room}.png`)),
+    // All bees
+    loadImg('bee-queen',    `${A}/bee-queen.png`),
+    loadImg('bee-scout',    `${A}/bee-scout.png`),
+    loadImg('bee-foreman',  `${A}/bee-foreman.png`),
+    loadImg('bee-nurse',    `${A}/bees/bee-nurse.png`),
+    loadImg('bee-chancellor',`${A}/bees/bee-chancellor.png`),
+    loadImg('bee-treasurer', `${A}/bees/bee-treasurer.png`),
+    loadImg('bee-warden',    `${A}/bees/bee-warden.png`),
+    loadImg('bee-supervisor',`${A}/bees/bee-supervisor.png`),
+    loadImg('bee-architect', `${A}/bees/bee-architect.png`),
+    loadImg('bee-auditor',   `${A}/bees/bee-auditor.png`),
+    loadImg('bee-worker',    `${A}/bees/bee-worker.png`),
+    // Animation frames
+    loadImg('bee-queen-walk1',`${A}/bees/bee-queen-walk1.png`),
+    loadImg('bee-scout-fly1', `${A}/bees/bee-scout-fly1.png`),
+    loadImg('bee-scout-fly2', `${A}/bees/bee-scout-fly2.png`),
+    // Background
+    loadImg('mountains',    `${A}/bg/mountains.png`),
+    loadImg('distant-city', `${A}/bg/distant-city.png`),
+    loadImg('clouds',       `${A}/bg/clouds.png`),
+  ];
+  await Promise.all(loads);
+  initParticles();
+  render();
+}
+
+fetchData();
+setInterval(fetchData,REFRESH);
+init();
+</script>
+</body>
+</html>
